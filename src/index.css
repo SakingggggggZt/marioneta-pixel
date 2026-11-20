@@ -1,0 +1,180 @@
+@import "tailwindcss";
+
+:root {
+  --bg-card: #222036;
+  --border-soft: #3c375e;
+  --border-bright: #6e59a8;
+  --accent-lilac: #9b6ee8;
+  --accent-cherry: #e02446;
+  --accent-gold: #e8c674;
+  --accent-mint: #5de0b2;
+  --text-main: #f2f1fa;
+  --text-dim: #a8a4c4;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+  background: radial-gradient(circle at 25% 20%, #24213b 0%, #141322 55%, #0d0c16 100%);
+  color: var(--text-main);
+  font-family: "JetBrains Mono", ui-monospace, "Cascadia Code", "Segoe UI", system-ui, sans-serif;
+  overflow-x: hidden;
+}
+
+.font-prose {
+  font-family: "Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif;
+}
+
+.pixel-canvas {
+  image-rendering: -moz-crisp-edges;
+  image-rendering: -webkit-crisp-edges;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.pixel-canvas.hand-active {
+  cursor: none;
+}
+
+.hud-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.hud-scroll::-webkit-scrollbar-thumb {
+  background: var(--border-soft);
+  border-radius: 3px;
+}
+
+.gothic-btn {
+  appearance: none;
+  border: 1px solid var(--border-soft);
+  background: linear-gradient(180deg, #2e2b4a 0%, #23203a 100%);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 8px;
+  border-radius: 7px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  transition: transform 0.08s ease, border-color 0.15s ease, background 0.15s ease;
+  text-align: center;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.gothic-btn:hover {
+  background: linear-gradient(180deg, #3a365c 0%, #2b2747 100%);
+  border-color: var(--border-bright);
+}
+
+.gothic-btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.45);
+}
+
+.gothic-btn.active {
+  background: linear-gradient(180deg, #7f54d4 0%, #5e38a8 100%);
+  border-color: #c2a6ff;
+  color: #fff;
+  box-shadow: 0 2px 0 #311a63, 0 0 12px rgba(155, 110, 232, 0.35);
+}
+
+.gothic-btn.cherry {
+  background: linear-gradient(180deg, #c92244 0%, #991632 100%);
+  border-color: #ff6987;
+}
+
+.gothic-btn.cherry:hover {
+  background: linear-gradient(180deg, #df2a4f 0%, #b01b3a 100%);
+}
+
+.gothic-btn.gold {
+  background: linear-gradient(180deg, #5a4522 0%, #3d2e16 100%);
+  border-color: #c79f4d;
+  color: #fff3d1;
+}
+
+.gothic-btn.gold:hover {
+  background: linear-gradient(180deg, #6e552a 0%, #4d3a1b 100%);
+  border-color: #f0cf80;
+}
+
+.gothic-btn.gold.active {
+  background: linear-gradient(180deg, #b88934 0%, #8a621e 100%);
+  border-color: #ffe299;
+  color: #fff;
+  box-shadow: 0 2px 0 #47300b, 0 0 12px rgba(232, 198, 116, 0.4);
+}
+
+.gothic-btn .btn-indicator {
+  font-size: 9.5px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text-dim);
+}
+
+.gothic-btn.active .btn-indicator {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+
+.gothic-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 8px;
+  background: #12111d;
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  outline: none;
+  cursor: pointer;
+}
+
+.gothic-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  background: linear-gradient(180deg, #e5dcff 0%, #9b6ee8 100%);
+  border: 2px solid #181629;
+  box-shadow: 0 0 8px rgba(155, 110, 232, 0.55);
+  cursor: grab;
+}
+
+.gothic-range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  background: linear-gradient(180deg, #e5dcff 0%, #9b6ee8 100%);
+  border: 2px solid #181629;
+  box-shadow: 0 0 8px rgba(155, 110, 232, 0.55);
+  cursor: grab;
+}
+
+/* Pixel-art stepped border for discreet speech bubble */
+.pixel-bubble {
+  background: rgba(18, 17, 30, 0.92);
+  border: 2px solid #9b6ee8;
+  box-shadow:
+    0 0 0 2px #0d0c16,
+    0 6px 20px rgba(0, 0, 0, 0.65),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+}

@@ -1,0 +1,1828 @@
+```html
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Marioneta Gótica · Visor Pixel Art & Físicas Blandas 2D</title>
+  <style>
+    :root{--bg-card:#222036;--border-soft:#3c375e;--border-bright:#6e59a8;--accent-lilac:#9b6ee8;--accent-cherry:#e02446;--accent-gold:#e8c674;--accent-mint:#5de0b2;--text-main:#f2f1fa;--text-dim:#a8a4c4}
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+    html,body{width:100%;min-height:100%;background:radial-gradient(circle at 25% 20%,#24213b 0%,#141322 55%,#0d0c16 100%);color:var(--text-main);font-family:ui-monospace,"Cascadia Code","Segoe UI",system-ui,sans-serif;overflow-x:hidden}
+    .app-shell{display:flex;flex-direction:row;align-items:stretch;justify-content:center;gap:16px;max-width:1180px;min-height:100vh;margin:0 auto;padding:14px}
+    .stage-column{flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0}
+    .stage-frame{position:relative;display:flex;align-items:center;justify-content:center;width:100%;max-width:600px;aspect-ratio:280/360;max-height:calc(100vh - 34px);background:#181826;border:2px solid var(--border-soft);border-radius:14px;box-shadow:0 18px 50px rgba(0,0,0,.65),inset 0 0 0 1px rgba(255,255,255,.05),0 0 28px rgba(155,110,232,.14);overflow:hidden}
+    #pixelCanvas{width:100%;height:100%;display:block;image-rendering:-moz-crisp-edges;image-rendering:-webkit-crisp-edges;image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none;user-select:none;-webkit-user-select:none}
+    #pixelCanvas.hand-active{cursor:none}
+    .stage-badge,.stage-zone-pill,.stage-hint{position:absolute;background:rgba(18,17,30,.84);border-radius:999px;font-size:11px;pointer-events:none;backdrop-filter:blur(4px)}
+    .stage-badge{top:10px;left:10px;border:1px solid rgba(155,110,232,.42);padding:4px 10px;letter-spacing:.4px;color:var(--text-main);display:flex;align-items:center;gap:6px}
+    .stage-badge .dot{width:7px;height:7px;border-radius:50%;background:var(--accent-mint);box-shadow:0 0 8px var(--accent-mint)}
+    .stage-zone-pill{top:10px;right:10px;border:1px solid rgba(255,255,255,.12);padding:4px 10px;color:var(--text-dim)}
+    .stage-hint{bottom:10px;left:50%;transform:translateX(-50%);border:1px solid rgba(155,110,232,.3);padding:4px 12px;color:#cfcbe8;white-space:nowrap;transition:opacity .4s ease}
+    .hud-column{flex:0 0 336px;width:336px;display:flex;flex-direction:column;gap:10px;background:linear-gradient(180deg,rgba(28,26,45,.96) 0%,rgba(20,19,34,.98) 100%);border:2px solid var(--border-soft);border-radius:14px;padding:12px;box-shadow:0 14px 36px rgba(0,0,0,.5);align-self:center;max-height:calc(100vh - 28px);overflow-y:auto}
+    .hud-column::-webkit-scrollbar{width:6px}
+    .hud-column::-webkit-scrollbar-thumb{background:var(--border-soft);border-radius:3px}
+    .hud-header{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(155,110,232,.25);padding-bottom:8px}
+    .hud-title{font-size:14px;font-weight:800;letter-spacing:.6px;display:flex;align-items:center;gap:7px}
+    .hud-title .crest{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,var(--accent-lilac),var(--accent-cherry));font-size:12px;box-shadow:0 0 10px rgba(155,110,232,.35)}
+    .hud-res-tag{font-size:10px;color:var(--text-dim);background:rgba(255,255,255,.06);padding:3px 7px;border-radius:6px;border:1px solid rgba(255,255,255,.08)}
+    .hud-section{background:var(--bg-card);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:9px 10px;display:flex;flex-direction:column;gap:8px}
+    .section-label{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.9px;color:var(--accent-lilac);display:flex;align-items:center;justify-content:space-between}
+    .mood-chip{font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:999px;background:rgba(155,110,232,.18);border:1px solid rgba(155,110,232,.5);color:#e6d8ff}
+    .mood-chip.feliz{background:rgba(93,224,178,.16);border-color:rgba(93,224,178,.55);color:#a9f7db}
+    .mood-chip.sorprendida{background:rgba(232,198,116,.16);border-color:rgba(232,198,116,.55);color:#fae5aa}
+    .mood-chip.ruborizada,.mood-chip.mimada{background:rgba(224,36,70,.18);border-color:rgba(224,36,70,.55);color:#ffb0c0}
+    .bar-track{width:100%;height:10px;background:#12111d;border-radius:999px;border:1px solid rgba(255,255,255,.08);overflow:hidden}
+    .bar-fill{height:100%;width:74%;border-radius:999px;background:linear-gradient(90deg,#9b6ee8 0%,#e02446 100%);transition:width .25s ease}
+    .bar-fill.blush{background:linear-gradient(90deg,#ff7a99 0%,#e02446 100%)}
+    .meter-header{display:flex;justify-content:space-between;font-size:11px;color:var(--text-dim);margin-bottom:3px}
+    .btn-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+    .btn-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+    .btn{appearance:none;border:1px solid var(--border-soft);background:linear-gradient(180deg,#2e2b4a 0%,#23203a 100%);color:var(--text-main);font-family:inherit;font-size:11.5px;font-weight:600;padding:8px;border-radius:7px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px;box-shadow:0 2px 0 rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.07);transition:transform .08s ease,border-color .15s ease,background .15s ease;text-align:center;line-height:1.15}
+    .btn:hover{background:linear-gradient(180deg,#3a365c 0%,#2b2747 100%);border-color:var(--border-bright)}
+    .btn:active{transform:translateY(1px);box-shadow:0 1px 0 rgba(0,0,0,.45)}
+    .btn.active{background:linear-gradient(180deg,#7f54d4 0%,#5e38a8 100%);border-color:#c2a6ff;color:#fff;box-shadow:0 2px 0 #311a63,0 0 12px rgba(155,110,232,.35)}
+    .btn.cherry{background:linear-gradient(180deg,#c92244 0%,#991632 100%);border-color:#ff6987}
+    .btn.cherry:hover{background:linear-gradient(180deg,#df2a4f 0%,#b01b3a 100%)}
+    .btn.gold{background:linear-gradient(180deg,#5a4522 0%,#3d2e16 100%);border-color:#c79f4d;color:#fff3d1}
+    .btn.gold:hover{background:linear-gradient(180deg,#6e552a 0%,#4d3a1b 100%);border-color:#f0cf80}
+    .btn.gold.active{background:linear-gradient(180deg,#b88934 0%,#8a621e 100%);border-color:#ffe299;color:#fff;box-shadow:0 2px 0 #47300b,0 0 12px rgba(232,198,116,.4)}
+    .mat-pill{font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:999px;background:rgba(232,198,116,.14);border:1px solid rgba(232,198,116,.42);color:#f4dca0;letter-spacing:.3px}
+    .btn-indicator{font-size:9.5px;padding:1px 5px;border-radius:4px;background:rgba(0,0,0,.35);color:var(--text-dim)}
+    .btn.active .btn-indicator{background:rgba(255,255,255,.22);color:#fff}
+    .slider-block{display:flex;flex-direction:column;gap:5px;padding-top:2px}
+    .slider-block.disabled{opacity:.45;pointer-events:none}
+    .slider-row{display:flex;align-items:center;justify-content:space-between;font-size:11.5px}
+    .slider-val{font-weight:700;color:var(--accent-gold);min-width:38px;text-align:right}
+    input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:8px;background:#12111d;border:1px solid var(--border-soft);border-radius:999px;outline:none;cursor:pointer}
+    input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:5px;background:linear-gradient(180deg,#e5dcff 0%,#9b6ee8 100%);border:2px solid #181629;box-shadow:0 0 8px rgba(155,110,232,.55);cursor:grab}
+    input[type="range"]::-moz-range-thumb{width:18px;height:18px;border-radius:5px;background:linear-gradient(180deg,#e5dcff 0%,#9b6ee8 100%);border:2px solid #181629;box-shadow:0 0 8px rgba(155,110,232,.55);cursor:grab}
+    .sub-note{font-size:10px;color:var(--text-dim);line-height:1.3}
+    @media(max-width:860px){.app-shell{flex-direction:column;align-items:center;padding:10px;gap:12px}.stage-frame{max-height:66vh;width:auto;max-width:100%}.hud-column{flex:0 0 auto;width:100%;max-width:520px;max-height:none}}
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <section class="stage-column" aria-label="Visor Interactivo Pixel Art">
+      <div class="stage-frame">
+        <canvas id="pixelCanvas" width="280" height="360" class="hand-active"></canvas>
+        <div class="stage-badge"><span class="dot"></span><span id="viewBadgeText">VISTA FRONTAL</span><span style="opacity:.45">|</span><span id="fpsCounter">60 FPS</span></div>
+        <div class="stage-zone-pill" id="zoneIndicator">Zona: —</div>
+        <div class="stage-hint" id="stageHint">Presiona, jala la cremallera o prueba la Vista Lateral</div>
+      </div>
+    </section>
+
+    <aside class="hud-column" aria-label="Panel de Control Tamagotchi y Vestuario">
+      <header class="hud-header">
+        <div class="hud-title"><span class="crest">✦</span><span>MARIONETA PIXEL</span></div>
+        <span class="hud-res-tag">280×360 · 3 VISTAS</span>
+      </header>
+
+      <section class="hud-section">
+        <div class="section-label"><span>Estado Tamagotchi</span><span id="moodChip" class="mood-chip">Tranquila</span></div>
+        <div><div class="meter-header"><span>Ánimo / Afecto</span><strong id="affectionText">74%</strong></div><div class="bar-track"><div class="bar-fill" id="affectionBar" style="width:74%"></div></div></div>
+        <div><div class="meter-header"><span>Rubor</span><strong id="blushText">15%</strong></div><div class="bar-track"><div class="bar-fill blush" id="blushBar" style="width:15%"></div></div></div>
+        <div class="btn-grid-2">
+          <button class="btn cherry" id="btnHappy" type="button">♥ Alegrarse</button>
+          <button class="btn" id="btnFeed" type="button">🧁 Alimentar</button>
+        </div>
+      </section>
+
+      <section class="hud-section">
+        <div class="section-label"><span>Físicas Blandas 2D</span><span style="font-size:9.5px;color:#938eb8;">POSE FIJA</span></div>
+        <div class="btn-grid-2">
+          <button class="btn" id="btnBounceBust" type="button">Rebote Busto</button>
+          <button class="btn" id="btnBounceGlutes" type="button">Rebote Glúteos</button>
+          <button class="btn" id="btnWave" type="button">Onda Física</button>
+          <button class="btn" id="btnCubeHit" type="button">Golpe Cubo</button>
+        </div>
+      </section>
+
+      <section class="hud-section">
+        <div class="section-label"><span>Herramientas y Cámara</span></div>
+        <div class="btn-grid-2">
+          <button class="btn active" id="btnToggleHand" type="button"><span>Mano</span><span class="btn-indicator" id="handStateLbl">ON</span></button>
+          <button class="btn" id="btnToggleCube" type="button"><span>Cubo</span><span class="btn-indicator" id="cubeStateLbl">OFF</span></button>
+        </div>
+        <div class="btn-grid-3">
+          <button class="btn active" data-view="front" type="button">Frontal</button>
+          <button class="btn" data-view="side" type="button">Lateral</button>
+          <button class="btn" data-view="back" type="button">Trasera</button>
+        </div>
+      </section>
+
+      <section class="hud-section">
+        <div class="section-label"><span>Traje Superior (Capa 4)</span><span id="suitActiveTag" class="mat-pill">Original · Látex</span></div>
+        <div class="btn-grid-2">
+          <button class="btn active" data-suit="original" type="button">Original</button>
+          <button class="btn" data-suit="maid" type="button">Maid</button>
+          <button class="btn" data-suit="marfil" type="button">Marfil</button>
+          <button class="btn" data-suit="none" type="button">Sin Traje</button>
+        </div>
+        <div class="btn-grid-2">
+          <button class="btn gold" id="btnPullFabric" type="button"><span>✦ Jalar Tela</span><span class="btn-indicator" id="pullFabricLbl">OFF</span></button>
+          <button class="btn" id="btnBreeze" type="button">〰 Brisa Tela</button>
+        </div>
+        <div class="slider-block" id="zipperBlock">
+          <div class="slider-row"><label for="zipperSlider">Cremallera</label><span class="slider-val" id="zipperVal">0%</span></div>
+          <input type="range" id="zipperSlider" min="0" max="100" value="0" step="1" />
+          <div class="sub-note" id="zipperHint">Arrastra el slider o el tirador metálico en el pecho.</div>
+        </div>
+        <div class="section-label" style="margin-top:2px;"><span>Lencería Independiente (Capas 1–3)</span></div>
+        <div class="btn-grid-3">
+          <button class="btn active" id="btnToggleBra" type="button"><span>Sostén</span><span class="btn-indicator" id="braLbl">ON</span></button>
+          <button class="btn active" id="btnTogglePanties" type="button"><span>Braga</span><span class="btn-indicator" id="pantiesLbl">ON</span></button>
+          <button class="btn active" id="btnToggleStockings" type="button"><span>Medias</span><span class="btn-indicator" id="stockingsLbl">ON</span></button>
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <script>
+  (() => {
+    'use strict';
+
+    const W = 280, H = 360, PIXEL_COUNT = W * H, CX = 140, SX = 140;
+    const SKEL = {
+      hairCrownTopY: 6, headTopY: 41, headCenterY: 62.5, headRx: 22.5, headRy: 20.5,
+      eyeY: 59.5, eyeOffX: 9.5, cheekY: 69.5, mouthY: 72.0, chinY: 83.0,
+      neckTopY: 81.5, neckMidY: 86.5, neckBotY: 92.5, neckHalfW: 11.5,
+      shoulderY: 92.0, shoulderX: 35.5, bicepBandY: 107.0,
+      elbowY: 142.0, elbowX: 63.5, wristBandY: 167.0, wristY: 176.0, wristX: 81.5, palmY: 188.0, palmX: 88.5,
+      bustTopY: 95.0, bustCenterY: 135.5, bustBotY: 172.0, bustCenterX: 27.0, bustRx: 32.5, bustRy: 36.0,
+      waistY: 175.5, waistHalfW: 25.5, waistBandTopY: 171.5, waistBandBotY: 192.5,
+      hipTopY: 183.0, hipPeakY: 207.0, hipHalfW: 57.5,
+      gluteCenterY: 206.0, gluteCenterX: 28.5, gluteRx: 33.0, gluteRy: 32.5,
+      crotchY: 213.0, thighBandY: 220.0, thighBandH: 16.5,
+      kneeY: 278.0, kneeCenterX: 18.5, kneeOuterX: 30.5, kneeInnerX: 5.5,
+      calfPeakY: 305.0, calfOuterX: 34.0, calfInnerX: 4.5,
+      ankleBandY: 341.0, ankleOuterX: 17.5, ankleInnerX: 8.5, footTipY: 359.0, footCenterX: 13.0,
+      sideBustX: SX - 44.0, sideBustY: 134.5, sideBustRx: 35.5, sideBustRy: 36.5,
+      sideGluteX: SX + 24.5, sideGluteY: 197.5, sideGluteRx: 32.5, sideGluteRy: 31.5,
+    };
+
+    const $ = (id) => document.getElementById(id);
+    const canvas = $('pixelCanvas');
+    const ctx = canvas.getContext('2d', { alpha: false });
+    ctx.imageSmoothingEnabled = false;
+
+    const scratchCanvas = document.createElement('canvas');
+    scratchCanvas.width = W; scratchCanvas.height = H;
+    const sctx = scratchCanvas.getContext('2d', { willReadFrequently: true });
+
+    const ui = {
+      viewBadgeText: $('viewBadgeText'), fpsCounter: $('fpsCounter'), zoneIndicator: $('zoneIndicator'),
+      stageHint: $('stageHint'), moodChip: $('moodChip'), affectionText: $('affectionText'),
+      affectionBar: $('affectionBar'), blushText: $('blushText'), blushBar: $('blushBar'),
+      btnHappy: $('btnHappy'), btnFeed: $('btnFeed'), btnBounceBust: $('btnBounceBust'),
+      btnBounceGlutes: $('btnBounceGlutes'), btnWave: $('btnWave'), btnCubeHit: $('btnCubeHit'),
+      btnToggleHand: $('btnToggleHand'), handStateLbl: $('handStateLbl'),
+      btnToggleCube: $('btnToggleCube'), cubeStateLbl: $('cubeStateLbl'),
+      viewButtons: Array.from(document.querySelectorAll('[data-view]')),
+      suitButtons: Array.from(document.querySelectorAll('[data-suit]')),
+      suitActiveTag: $('suitActiveTag'), btnPullFabric: $('btnPullFabric'), pullFabricLbl: $('pullFabricLbl'),
+      btnBreeze: $('btnBreeze'), zipperBlock: $('zipperBlock'), zipperSlider: $('zipperSlider'),
+      zipperVal: $('zipperVal'), zipperHint: $('zipperHint'),
+      btnToggleBra: $('btnToggleBra'), braLbl: $('braLbl'),
+      btnTogglePanties: $('btnTogglePanties'), pantiesLbl: $('pantiesLbl'),
+      btnToggleStockings: $('btnToggleStockings'), stockingsLbl: $('stockingsLbl'),
+    };
+
+    const IS_LE = (() => { const b = new ArrayBuffer(4); new Uint32Array(b)[0] = 0x0a0b0c0d; return new Uint8Array(b)[0] === 0x0d; })();
+    const packRGBA = (r, g, b, a = 255) => {
+      r = r < 0 ? 0 : r > 255 ? 255 : r | 0; g = g < 0 ? 0 : g > 255 ? 255 : g | 0;
+      b = b < 0 ? 0 : b > 255 ? 255 : b | 0; a = a < 0 ? 0 : a > 255 ? 255 : a | 0;
+      return IS_LE ? ((a << 24) | (b << 16) | (g << 8) | r) >>> 0 : ((r << 24) | (g << 16) | (b << 8) | a) >>> 0;
+    };
+    const unpackR = (c) => IS_LE ? (c & 255) : ((c >>> 24) & 255);
+    const unpackG = (c) => IS_LE ? ((c >>> 8) & 255) : ((c >>> 16) & 255);
+    const unpackB = (c) => IS_LE ? ((c >>> 16) & 255) : ((c >>> 8) & 255);
+    const unpackA = (c) => IS_LE ? ((c >>> 24) & 255) : (c & 255);
+    const clamp = (v, lo, hi) => v < lo ? lo : v > hi ? hi : v;
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const smoothstep = (e0, e1, x) => { const t = clamp((x - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t); };
+
+    const BAYER4 = [-.46875,.03125,-.34375,.15625,.28125,-.21875,.40625,-.09375,-.28125,.21875,-.40625,.09375,.46875,-.03125,.34375,-.15625];
+    const bayer = (x, y) => BAYER4[((y & 3) << 2) | (x & 3)];
+
+    const PAL = {
+      outline: packRGBA(10,10,17), outlineSoft: packRGBA(28,26,42),
+      skinDeep: packRGBA(168,167,198), skinMid: packRGBA(206,206,230), skinBase: packRGBA(242,242,252), skinHi: packRGBA(255,255,255),
+      latexDeep: packRGBA(11,11,18), latexDark: packRGBA(18,18,29), latexBase: packRGBA(27,27,42), latexMid: packRGBA(45,46,68),
+      latexRim: packRGBA(72,74,102), latexSpec1: packRGBA(114,118,150), latexSpec2: packRGBA(184,190,220), latexSpec3: packRGBA(240,244,255),
+      ivoryDeep: packRGBA(148,139,126), ivoryMid: packRGBA(196,187,172), ivoryBase: packRGBA(236,230,218), ivoryHi: packRGBA(255,253,248),
+      silkSheen: packRGBA(255,246,226), champagne: packRGBA(218,204,180),
+      velvetDeep: packRGBA(16,14,26), velvetBase: packRGBA(32,28,48), velvetMid: packRGBA(52,46,74), velvetRim: packRGBA(82,72,114),
+      ribbonBase: packRGBA(202,34,72), ribbonHi: packRGBA(248,108,138), lilacTrim: packRGBA(158,114,238),
+      whiteShadow: packRGBA(216,218,238), whitePure: packRGBA(255,255,255),
+      hairBlack: packRGBA(12,11,20), hairBlackHi: packRGBA(36,35,52), claw: packRGBA(11,10,20), clawHi: packRGBA(72,70,114),
+      silverDark: packRGBA(80,84,108), silverMid: packRGBA(164,170,198), silverHi: packRGBA(246,248,255),
+      goldDark: packRGBA(146,108,42), goldMid: packRGBA(216,176,92), goldHi: packRGBA(255,240,176),
+      lidBase: packRGBA(150,102,236), lidShadow: packRGBA(108,64,188), lidHi: packRGBA(198,166,255),
+      tear: packRGBA(136,86,224), tearDark: packRGBA(96,52,178), cheek: packRGBA(224,24,58), cheekSoft: packRGBA(248,108,136),
+      lipBase: packRGBA(218,32,70), lipDark: packRGBA(136,16,44), lipHi: packRGBA(255,164,188),
+    };
+
+    function shadePacked(col, delta) {
+      if (col === 0) return 0;
+      const a = unpackA(col);
+      return a === 0 ? 0 : packRGBA(clamp(unpackR(col) + delta, 8, 255), clamp(unpackG(col) + delta, 8, 255), clamp(unpackB(col) + delta, 12, 255), a);
+    }
+
+    function rasterizeBezierMask(drawFn) {
+      sctx.clearRect(0, 0, W, H); sctx.save(); sctx.fillStyle = '#fff'; sctx.strokeStyle = '#fff';
+      drawFn(sctx); sctx.restore();
+      const raw = sctx.getImageData(0, 0, W, H).data, mask = new Uint8Array(PIXEL_COUNT);
+      for (let i = 0; i < PIXEL_COUNT; i++) mask[i] = raw[(i << 2) + 3] >= 120 ? 1 : 0;
+      return mask;
+    }
+
+    function computeEdgeDistance(mask) {
+      const dist = new Uint8Array(PIXEL_COUNT);
+      for (let i = 0; i < PIXEL_COUNT; i++) dist[i] = mask[i] ? 40 : 0;
+      for (let y = 1; y < H - 1; y++) {
+        const row = y * W;
+        for (let x = 1; x < W - 1; x++) {
+          const i = row + x; if (!mask[i]) continue;
+          let d = dist[i]; if (dist[i - W] + 1 < d) d = dist[i - W] + 1; if (dist[i - 1] + 1 < d) d = dist[i - 1] + 1; dist[i] = d;
+        }
+      }
+      for (let y = H - 2; y >= 1; y--) {
+        const row = y * W;
+        for (let x = W - 2; x >= 1; x--) {
+          const i = row + x; if (!mask[i]) continue;
+          let d = dist[i]; if (dist[i + W] + 1 < d) d = dist[i + W] + 1; if (dist[i + 1] + 1 < d) d = dist[i + 1] + 1; dist[i] = d;
+        }
+      }
+      return dist;
+    }
+
+    function computeScanlineNormals(mask, splitCenterY = 9999, yCenter = null, yRadius = 1) {
+      const nxArr = new Float32Array(PIXEL_COUNT), nyArr = new Float32Array(PIXEL_COUNT), nzArr = new Float32Array(PIXEL_COUNT);
+      for (let y = 0; y < H; y++) {
+        const row = y * W; let x = 0;
+        while (x < W) {
+          while (x < W && !mask[row + x]) x++;
+          if (x >= W) break;
+          const start = x;
+          while (x < W && mask[row + x]) { if (y >= splitCenterY && x === CX && x > start) break; x++; }
+          const end = x - 1, mid = (start + end) * 0.5, hw = Math.max(1.5, (end - start) * 0.5 + 0.5);
+          const nyBase = yCenter !== null ? clamp((y - yCenter) / yRadius, -0.90, 0.90) : 0;
+          for (let px = start; px <= end; px++) {
+            let u = clamp((px - mid) / hw, -0.96, 0.96), v = nyBase, r2 = u * u + v * v;
+            if (r2 > 0.95) { const sc = Math.sqrt(0.95 / r2); u *= sc; v *= sc; }
+            const i = row + px; nxArr[i] = u; nyArr[i] = v; nzArr[i] = Math.sqrt(Math.max(0.05, 1.0 - u * u - v * v));
+          }
+        }
+      }
+      return { nx: nxArr, ny: nyArr, nz: nzArr };
+    }
+
+    function shadeMaterial3D(x, y, nx, ny, nz, material, extraShadow = 0, specBoost = 1.0) {
+      const ndotl1 = Math.max(0, nx * -0.36 + ny * -0.56 + nz * 0.74);
+      const ndotl2 = Math.max(0, nx *  0.42 + ny * -0.44 + nz * 0.79);
+      const diff = clamp(ndotl1 * 0.74 + ndotl2 * 0.34 - extraShadow, 0, 1);
+      const h1 = Math.max(0, nx * -0.193 + ny * -0.301 + nz * 0.934);
+      const h2 = Math.max(0, nx *  0.222 + ny * -0.233 + nz * 0.947);
+      const spec = Math.max(Math.pow(h1, 20) * 0.85, Math.pow(h2, 32) * 0.95) * specBoost * clamp(1.0 - extraShadow * 1.9, 0, 1);
+      const rim = Math.pow(clamp(1.0 - nz, 0, 1), 2.15) * clamp(0.65 - ny * 0.45, 0.15, 1.0) * clamp(1.0 - extraShadow * 1.4, 0, 1);
+      const d = bayer(x, y) * 0.065;
+
+      if (material === 'skin') {
+        if (extraShadow > 0.34 || diff + d < 0.24) return PAL.skinDeep;
+        if (extraShadow > 0.14 || diff + d < 0.50) return PAL.skinMid;
+        return diff + d > 0.84 ? PAL.skinHi : PAL.skinBase;
+      }
+      if (material === 'ivory') {
+        if (spec + d > 0.56) return PAL.ivoryHi;
+        if (rim + d > 0.44) return PAL.silkSheen;
+        if (extraShadow > 0.30 || diff + d < 0.24) return PAL.ivoryDeep;
+        if (extraShadow > 0.12 || diff + d < 0.50) return PAL.ivoryMid;
+        return diff + d < 0.66 ? PAL.champagne : PAL.ivoryBase;
+      }
+      if (material === 'velvet') {
+        if (rim + d > 0.40) return PAL.velvetRim;
+        if (extraShadow > 0.24 || diff + d < 0.28) return PAL.velvetDeep;
+        return diff + d > 0.66 ? PAL.velvetMid : PAL.velvetBase;
+      }
+      if (spec + d * 0.8 > 0.72) return PAL.latexSpec3;
+      if (spec + d > 0.45) return PAL.latexSpec2;
+      if (spec + d > 0.23) return PAL.latexSpec1;
+      if (rim + d > 0.44) return PAL.latexRim;
+      if (diff + d > 0.64) return PAL.latexMid;
+      if (diff + d > 0.34) return PAL.latexBase;
+      return diff + d > 0.16 ? PAL.latexDark : PAL.latexDeep;
+    }
+
+    function stampBezierColor(targetBuf, clipMask, color, drawFn) {
+      const mask = rasterizeBezierMask(drawFn);
+      for (let i = 0; i < PIXEL_COUNT; i++) if (mask[i] && (!clipMask || clipMask[i])) targetBuf[i] = color;
+    }
+
+    function applyOutline(buf, outlineCol, x0 = 1, y0 = 1, x1 = W - 2, y1 = H - 2) {
+      const minX = Math.max(1, x0 | 0), minY = Math.max(1, y0 | 0), maxX = Math.min(W - 2, x1 | 0), maxY = Math.min(H - 2, y1 | 0);
+      const solid = new Uint8Array(PIXEL_COUNT);
+      for (let y = minY; y <= maxY; y++) { const row = y * W; for (let x = minX; x <= maxX; x++) if (buf[row + x] !== 0) solid[row + x] = 1; }
+      for (let y = minY; y <= maxY; y++) {
+        const row = y * W;
+        for (let x = minX; x <= maxX; x++) {
+          const i = row + x;
+          if (!solid[i] && (solid[i - 1] || solid[i + 1] || solid[i - W] || solid[i + W])) buf[i] = outlineCol;
+        }
+      }
+    }
+
+    function traceTaperedArc(c, ax, ay, mx, my, bx, by, halfThick) {
+      const dx = bx - ax, dy = by - ay, len = Math.hypot(dx, dy) || 1, nx = -dy / len, ny = dx / len;
+      c.beginPath(); c.moveTo(ax, ay);
+      c.quadraticCurveTo(mx + nx * halfThick, my + ny * halfThick, bx, by);
+      c.quadraticCurveTo(mx - nx * halfThick, my - ny * halfThick, ax, ay);
+      c.closePath(); c.fill();
+    }
+
+    function traceSharpCurvedX(c, cx, cy, rx, ry, bendX, bendY, halfThick) {
+      traceTaperedArc(c, cx - rx, cy - ry, cx + bendX, cy + bendY, cx + rx, cy + ry, halfThick);
+      traceTaperedArc(c, cx + rx, cy - ry, cx + bendX, cy + bendY, cx - rx, cy + ry, halfThick);
+    }
+
+    // ---- TRAZADORES ANATÓMICOS BÉZIER ----
+    function traceTorsoAndLegsFrontBack(c) {
+      const S = SKEL;
+      c.beginPath();
+      c.moveTo(CX - S.neckHalfW, S.neckTopY); c.lineTo(CX - S.neckHalfW - 0.8, S.neckBotY - 1);
+      c.bezierCurveTo(CX - 22, S.neckBotY + 1, CX - 32, S.shoulderY, CX - S.shoulderX, S.shoulderY + 5);
+      c.bezierCurveTo(CX - 36, S.bustCenterY - 8, CX - 28, S.waistY - 14, CX - S.waistHalfW, S.waistY);
+      c.bezierCurveTo(CX - 34, S.waistY + 6, CX - S.hipHalfW, S.hipTopY + 10, CX - S.hipHalfW, S.hipPeakY);
+      c.bezierCurveTo(CX - S.hipHalfW, S.thighBandY + 18, CX - 42, S.kneeY - 24, CX - S.kneeOuterX, S.kneeY);
+      c.bezierCurveTo(CX - 32, S.kneeY + 12, CX - S.calfOuterX, S.calfPeakY - 12, CX - S.calfOuterX, S.calfPeakY);
+      c.bezierCurveTo(CX - 33, S.calfPeakY + 16, CX - 22, S.ankleBandY - 8, CX - S.ankleOuterX, S.ankleBandY);
+      c.quadraticCurveTo(CX - 16, S.footTipY - 6, CX - S.footCenterX, S.footTipY);
+      c.quadraticCurveTo(CX - 10, S.footTipY - 6, CX - S.ankleInnerX, S.ankleBandY);
+      c.bezierCurveTo(CX - 6, S.calfPeakY + 12, CX - S.calfInnerX, S.calfPeakY, CX - S.kneeInnerX, S.kneeY);
+      c.bezierCurveTo(CX - 4.5, S.kneeY - 18, CX - 1.5, S.thighBandY + 18, CX - 0.8, S.crotchY + 4);
+      c.quadraticCurveTo(CX, S.crotchY, CX + 0.8, S.crotchY + 4);
+      c.bezierCurveTo(CX + 1.5, S.thighBandY + 18, CX + 4.5, S.kneeY - 18, CX + S.kneeInnerX, S.kneeY);
+      c.bezierCurveTo(CX + S.calfInnerX, S.calfPeakY, CX + 6, S.calfPeakY + 12, CX + S.ankleInnerX, S.ankleBandY);
+      c.quadraticCurveTo(CX + 10, S.footTipY - 6, CX + S.footCenterX, S.footTipY);
+      c.quadraticCurveTo(CX + 16, S.footTipY - 6, CX + S.ankleOuterX, S.ankleBandY);
+      c.bezierCurveTo(CX + 22, S.ankleBandY - 8, CX + 33, S.calfPeakY + 16, CX + S.calfOuterX, S.calfPeakY);
+      c.bezierCurveTo(CX + S.calfOuterX, S.calfPeakY - 12, CX + 32, S.kneeY + 12, CX + S.kneeOuterX, S.kneeY);
+      c.bezierCurveTo(CX + 42, S.kneeY - 24, CX + S.hipHalfW, S.thighBandY + 18, CX + S.hipHalfW, S.hipPeakY);
+      c.bezierCurveTo(CX + S.hipHalfW, S.hipTopY + 10, CX + 34, S.waistY + 6, CX + S.waistHalfW, S.waistY);
+      c.bezierCurveTo(CX + 28, S.waistY - 14, CX + 36, S.bustCenterY - 8, CX + S.shoulderX, S.shoulderY + 5);
+      c.bezierCurveTo(CX + 32, S.shoulderY, CX + 22, S.neckBotY + 1, CX + S.neckHalfW + 0.8, S.neckBotY - 1);
+      c.lineTo(CX + S.neckHalfW, S.neckTopY); c.closePath(); c.fill();
+    }
+
+    function traceHeadFrontBack(c) {
+      const S = SKEL;
+      c.beginPath(); c.moveTo(CX, S.headTopY);
+      c.bezierCurveTo(CX + S.headRx * 1.05, S.headTopY + 1, CX + S.headRx * 1.05, S.cheekY + 2, CX + 12, S.chinY - 2.5);
+      c.quadraticCurveTo(CX, S.chinY + 2.0, CX - 12, S.chinY - 2.5);
+      c.bezierCurveTo(CX - S.headRx * 1.05, S.cheekY + 2, CX - S.headRx * 1.05, S.headTopY + 1, CX, S.headTopY);
+      c.closePath(); c.fill();
+    }
+
+    function traceArmsFrontBack(c, side) {
+      const S = SKEL, sx = (dx) => CX + side * dx;
+      c.beginPath();
+      c.moveTo(sx(S.shoulderX - 4), S.shoulderY + 1);
+      c.bezierCurveTo(sx(50), S.shoulderY + 2, sx(60), S.bicepBandY + 6, sx(S.elbowX + 8.5), S.elbowY - 3);
+      c.bezierCurveTo(sx(77), S.elbowY + 12, sx(86), S.wristBandY - 4, sx(S.wristX + 7.5), S.wristY + 1);
+      c.quadraticCurveTo(sx(S.palmX + 9.5), S.palmY + 1, sx(S.palmX + 8), S.palmY + 10);
+      c.lineTo(sx(S.palmX - 5.5), S.palmY + 9);
+      c.quadraticCurveTo(sx(S.wristX - 6), S.wristY + 4, sx(S.wristX - 6.5), S.wristY - 2);
+      c.bezierCurveTo(sx(70), S.wristBandY - 6, sx(60), S.elbowY + 11, sx(S.elbowX - 6.5), S.elbowY + 3);
+      c.bezierCurveTo(sx(49), S.bicepBandY + 15, sx(38), S.shoulderY + 19, sx(S.shoulderX - 6), S.shoulderY + 18);
+      c.closePath(); c.fill();
+      const px = sx(S.palmX), py = S.palmY + 6; c.lineCap = 'round';
+      c.lineWidth = 4.2; c.beginPath(); c.moveTo(px - side * 4.5, py - 1); c.quadraticCurveTo(px - side * 11.2, py + 4.5, px - side * 11.8, py + 12.2); c.stroke();
+      for (const [ox, tx, len, lw] of [[-2.8,-5.2,16.5,3.3],[.6,-.5,19,3.3],[4,4.5,17.8,3.1],[7,8.6,14.5,2.8]]) {
+        c.lineWidth = lw; c.beginPath(); c.moveTo(px + side * ox, py + 1); c.quadraticCurveTo(px + side * (ox + tx) * 0.5, py + len * 0.55, px + side * tx, py + len); c.stroke();
+      }
+    }
+
+    function traceFingerTipsWhiteFrontBack(c, side) {
+      const S = SKEL, px = CX + side * S.palmX, py = S.palmY + 6; c.lineCap = 'round';
+      c.lineWidth = 4.0; c.beginPath(); c.moveTo(px - side * 10, py + 6.5); c.lineTo(px - side * 11.9, py + 12.6); c.stroke();
+      for (const [ax, bx, y0, y1, lw] of [[-4.2,-5.4,9.5,16.8,3.2],[0,-.6,11,19.2,3.2],[4.2,4.6,10.2,18,3],[7.7,8.8,8,14.8,2.7]]) {
+        c.lineWidth = lw; c.beginPath(); c.moveTo(px + side * ax, py + y0); c.lineTo(px + side * bx, py + y1); c.stroke();
+      }
+    }
+
+    function traceClawsFrontBack(c) {
+      const S = SKEL;
+      for (const side of [-1, 1]) {
+        const px = CX + side * S.palmX, py = S.palmY + 6;
+        for (const [ax, ay, bx, by, w] of [[-11.8,12.2,-13,19.2,1.6],[-5.2,16.4,-6.4,24,1.5],[-.5,18.8,-.8,26.8,1.5],[4.5,17.6,5.2,25.2,1.4],[8.6,14.4,10,21,1.3]]) {
+          c.beginPath(); c.moveTo(px + side * ax - w, py + ay); c.lineTo(px + side * bx, py + by); c.lineTo(px + side * ax + w, py + ay); c.closePath(); c.fill();
+        }
+      }
+    }
+
+    function traceBustFrontBezier(c) {
+      const S = SKEL;
+      for (const s of [-1, 1]) {
+        const bx = CX + s * S.bustCenterX, by = S.bustCenterY, rx = S.bustRx, ry = S.bustRy;
+        c.beginPath(); c.moveTo(CX - s * 0.5, S.bustTopY + 3);
+        c.bezierCurveTo(bx + s * rx * 0.45, by - ry * 1.12, bx + s * rx * 1.06, by - ry * 0.55, bx + s * rx * 1.03, by + ry * 0.16);
+        c.bezierCurveTo(bx + s * rx * 0.96, by + ry * 0.96, bx - s * rx * 0.08, by + ry * 1.12, CX + s * 0.8, by + ry * 0.72);
+        c.lineTo(CX - s * 0.5, by + ry * 0.65); c.closePath(); c.fill();
+      }
+    }
+
+    function traceGlutesBackBezier(c) {
+      const S = SKEL;
+      for (const s of [-1, 1]) {
+        const gx = CX + s * S.gluteCenterX, gy = S.gluteCenterY, rx = S.gluteRx, ry = S.gluteRy;
+        c.beginPath(); c.moveTo(CX - s * 0.5, gy - ry * 0.82);
+        c.bezierCurveTo(gx + s * rx * 0.35, gy - ry * 1.08, gx + s * rx * 1.04, gy - ry * 0.65, gx + s * rx * 1.03, gy + ry * 0.14);
+        c.bezierCurveTo(gx + s * rx * 0.98, gy + ry * 0.98, gx - s * rx * 0.08, gy + ry * 1.08, CX + s * 0.8, gy + ry * 0.70);
+        c.lineTo(CX - s * 0.5, gy + ry * 0.62); c.closePath(); c.fill();
+      }
+    }
+
+    function traceTorsoAndLegsSide(c) {
+      c.beginPath(); c.moveTo(SX - 10, 78); c.lineTo(SX - 12, 92);
+      c.bezierCurveTo(SX - 22, 114, SX - 24, 148, SX - 22, 174);
+      c.bezierCurveTo(SX - 26, 192, SX - 30, 224, SX - 26, 250);
+      c.bezierCurveTo(SX - 24, 266, SX - 22, 274, SX - 22, 281);
+      c.bezierCurveTo(SX - 20, 298, SX - 15, 326, SX - 10, 344);
+      c.lineTo(SX - 6, 359); c.lineTo(SX + 11, 359); c.lineTo(SX + 14, 344);
+      c.bezierCurveTo(SX + 22, 330, SX + 29, 314, SX + 28, 300);
+      c.bezierCurveTo(SX + 27, 286, SX + 14, 278, SX + 7, 274);
+      c.bezierCurveTo(SX + 14, 260, SX + 32, 244, SX + 36, 224);
+      c.bezierCurveTo(SX + 34, 200, SX + 24, 178, SX + 16, 162);
+      c.bezierCurveTo(SX + 13, 144, SX + 20, 116, SX + 17, 94);
+      c.quadraticCurveTo(SX + 14, 84, SX + 10, 78); c.closePath(); c.fill();
+    }
+
+    function traceHeadSide(c) { c.beginPath(); c.ellipse(SX - 8, 60, 22, 22, -0.08, 0, Math.PI * 2); c.fill(); }
+    function traceBustSide(c) {
+      c.beginPath(); c.moveTo(SX - 10, 96);
+      c.bezierCurveTo(SX - 44, 96, SX - 81, 116, SX - 80, 140);
+      c.bezierCurveTo(SX - 79, 165, SX - 52, 176, SX - 24, 170);
+      c.bezierCurveTo(SX - 12, 167, SX - 8, 152, SX - 8, 134); c.closePath(); c.fill();
+    }
+    function traceGlutesSide(c) {
+      c.beginPath(); c.moveTo(SX + 12, 164);
+      c.bezierCurveTo(SX + 38, 164, SX + 58, 179, SX + 57, 200);
+      c.bezierCurveTo(SX + 56, 221, SX + 38, 234, SX + 16, 228);
+      c.bezierCurveTo(SX + 4, 225, SX + 2, 206, SX + 4, 184); c.closePath(); c.fill();
+    }
+    function traceFrontArmSide(c) {
+      c.beginPath(); c.moveTo(SX - 12, 92);
+      c.bezierCurveTo(SX - 4, 86, SX + 14, 89, SX + 16, 102);
+      c.bezierCurveTo(SX + 20, 122, SX + 17, 144, SX + 9, 164);
+      c.bezierCurveTo(SX + 4, 176, SX + 1, 188, SX - 6, 198);
+      c.lineTo(SX - 32, 196);
+      c.bezierCurveTo(SX - 34, 182, SX - 28, 168, SX - 22, 156);
+      c.bezierCurveTo(SX - 16, 138, SX - 15, 114, SX - 12, 92); c.closePath(); c.fill();
+      c.lineCap = 'round';
+      for (const [x0,y0,cx,cy,x1,y1,lw] of [[SX-31,192,SX-37,204,SX-40,214,3.8],[SX-26,195,SX-31,210,SX-35,223,4],[SX-19,196,SX-23,212,SX-27,227,4.1],[SX-12,196,SX-16,212,SX-19,226,3.9],[SX-6,194,SX-9,209,SX-11,221,3.6]]) {
+        c.lineWidth = lw; c.beginPath(); c.moveTo(x0, y0); c.quadraticCurveTo(cx, cy, x1, y1); c.stroke();
+      }
+    }
+    function traceFingerTipsWhiteSide(c) {
+      c.lineCap = 'round';
+      for (const [ax,ay,bx,by,lw] of [[SX-37,204,SX-40.5,214.5,3.7],[SX-31,211,SX-35.5,223.5,3.9],[SX-23,213,SX-27.5,227.5,4],[SX-16,213,SX-19.5,226.5,3.8],[SX-9,210,SX-11.5,221.5,3.5]]) {
+        c.lineWidth = lw; c.beginPath(); c.moveTo(ax, ay); c.lineTo(bx, by); c.stroke();
+      }
+    }
+    function traceClawsSide(c) {
+      for (const [ax,ay,bx,by,w] of [[SX-40.2,213.5,SX-42.5,223.5,1.7],[SX-35.2,222.5,SX-38.2,234.5,1.8],[SX-27.2,226.5,SX-30,239,1.8],[SX-19.2,225.5,SX-21.5,237.5,1.7],[SX-11.2,220.5,SX-13,231,1.6]]) {
+        c.beginPath(); c.moveTo(ax - w, ay); c.lineTo(bx, by); c.lineTo(ax + w, ay); c.closePath(); c.fill();
+      }
+    }
+
+    // ---- ESTADO Y BUFFERS ----
+    const SUIT_MATERIALS = {
+      original: { tag:'Original · Látex',  tension:.72, clothLag:.36, slipGain:.62, wrinkleAmp:6.5,  glintAmp:28, viscoDecay:6.4 },
+      maid:     { tag:'Maid · Terciopelo', tension:.90, clothLag:.88, slipGain:1.15,wrinkleAmp:13.5, glintAmp:4,  viscoDecay:2.9 },
+      marfil:   { tag:'Marfil · Seda',     tension:.82, clothLag:.74, slipGain:1.32,wrinkleAmp:9.5,  glintAmp:18, viscoDecay:3.8 },
+      none:     { tag:'Sin Traje · Piel',  tension:1.0, clothLag:0,   slipGain:0,   wrinkleAmp:1.5,  glintAmp:0,  viscoDecay:4.2 },
+    };
+
+    const state = {
+      view:'front', suit:'original', zipper:0, bra:true, panties:true, stockings:true,
+      handEnabled:true, cubeEnabled:false, pullFabric:false,
+      affection:74, blush:.15, mood:'Tranquila', moodTimer:0, blinkTimer:2.8, blinkPhase:0, eatAnim:null, time:0,
+    };
+
+    const bgBuf = new Uint32Array(PIXEL_COUNT), hairChunkBuf = new Uint32Array(PIXEL_COUNT);
+    const masks = { torsoLegs:null, head:null, arms:null, claws:null, fixedUnion:null, softDom:null, softSideBust:null, softSideGlute:null, peekDom:null, torsoNorm:null, armNorm:null, headNorm:null };
+    const u32 = () => new Uint32Array(PIXEL_COUNT), u8 = () => new Uint8Array(PIXEL_COUNT), f32 = () => new Float32Array(PIXEL_COUNT);
+    const garmentLayers = {
+      fixedBody:u32(), fixedMedias:u32(), fixedBraga:u32(), fixedSosten:u32(), fixedTraje:u32(),
+      frontArmBody:u32(), frontArmTraje:u32(),
+      softBody:u32(), softMedias:u32(), softBraga:u32(), softSosten:u32(), softTraje:u32(),
+      peekBody:u32(), peekSosten:u32(), peekTraje:u32(), skirtCloth:u32(), headAcc:u32(),
+    };
+    const planes = {
+      fixedRGBA:u32(), fixedLayerID:u8(), fixedSuitRGBA:u32(), frontArmRGBA:u32(), frontArmSuitRGBA:u32(),
+      softRGBA:u32(), softLayerID:u8(), softSuitRGBA:u32(), peekRGBA:u32(), peekLayerID:u8(), peekSuitRGBA:u32(),
+      skirtRGBA:u32(), headAccRGBA:u32(), hairRGBA:u32(), hairZone:u8(), hitZoneMask:u8(),
+      softWeightL:f32(), softWeightR:f32(), hipWeightL:f32(), hipWeightR:f32(),
+      hairWeightTop:f32(), hairWeightBangs:f32(), hairWeightCurl:f32(), hairWeightBot:f32(),
+    };
+    const frameImageData = ctx.createImageData(W, H), frameU32 = new Uint32Array(frameImageData.data.buffer);
+
+    function buildBackground() {
+      const horizon = Math.round(H * 0.475);
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+        const idx = y * W + x, dx = (x - CX) / 170, dy = (y - 120) / 210;
+        const vig = clamp(1 - (dx * dx + dy * dy) * 0.24, 0.72, 1), d = bayer(x, y) * 2.2;
+        let r, g, b;
+        if (y < horizon) { const t = y / horizon; r = lerp(63,102,t)*vig+d; g = lerp(61,98,t)*vig+d; b = lerp(92,134,t)*vig+d; }
+        else { const t = (y - horizon) / (H - horizon); r = lerp(39,22,t)*vig+d; g = lerp(38,21,t)*vig+d; b = lerp(58,34,t)*vig+d; }
+        const px = (x - CX) / 168, py = (y - 364) / 48, pd = px * px + py * py;
+        if (pd <= 1) {
+          const rim = smoothstep(0.92, 1, pd), grad = clamp(1 - (y - 316) / 46, 0, 1);
+          r = lerp(152,180,grad*.65) - rim*22 + d; g = lerp(156,184,grad*.65) - rim*22 + d; b = lerp(186,214,grad*.65) - rim*18 + d;
+          const sd = Math.pow((x - (CX + 4)) / 40, 2) + Math.pow((y - 355) / 9, 2);
+          if (sd < 1) { const sh = (1 - sd) * 0.36; r *= 1 - sh; g *= 1 - sh; b *= 1 - sh; }
+        }
+        bgBuf[idx] = packRGBA(r, g, b);
+      }
+    }
+
+    function clearAllGarments() {
+      for (const k in garmentLayers) garmentLayers[k].fill(0);
+      for (const k of ['fixedRGBA','fixedLayerID','fixedSuitRGBA','frontArmRGBA','frontArmSuitRGBA','softRGBA','softLayerID','softSuitRGBA','peekRGBA','peekLayerID','peekSuitRGBA','skirtRGBA','headAccRGBA','hitZoneMask']) planes[k].fill(0);
+    }
+
+    function buildAnatomicalMasks(view) {
+      const S = SKEL;
+      if (view === 'side') {
+        masks.torsoLegs = rasterizeBezierMask(traceTorsoAndLegsSide);
+        masks.head = rasterizeBezierMask(traceHeadSide);
+        masks.arms = rasterizeBezierMask(traceFrontArmSide);
+        masks.claws = rasterizeBezierMask(traceClawsSide);
+        const u = u8(); for (let i = 0; i < PIXEL_COUNT; i++) u[i] = (masks.torsoLegs[i] || masks.head[i]) ? 1 : 0;
+        masks.fixedUnion = u;
+        masks.torsoNorm = computeScanlineNormals(masks.torsoLegs, 9999);
+        masks.armNorm = computeScanlineNormals(masks.arms, 9999);
+        masks.headNorm = computeScanlineNormals(masks.head, 9999, 60, 22);
+        masks.softSideBust = rasterizeBezierMask(traceBustSide);
+        masks.softSideGlute = rasterizeBezierMask(traceGlutesSide);
+        const sd = u8(); for (let i = 0; i < PIXEL_COUNT; i++) sd[i] = (masks.softSideBust[i] || masks.softSideGlute[i]) ? 1 : 0;
+        masks.softDom = sd; masks.peekDom = u8();
+        return;
+      }
+      masks.torsoLegs = rasterizeBezierMask(traceTorsoAndLegsFrontBack);
+      masks.head = rasterizeBezierMask(traceHeadFrontBack);
+      masks.arms = rasterizeBezierMask((c) => { traceArmsFrontBack(c, -1); traceArmsFrontBack(c, 1); });
+      masks.claws = rasterizeBezierMask(traceClawsFrontBack);
+      const u = u8(); for (let i = 0; i < PIXEL_COUNT; i++) u[i] = (masks.torsoLegs[i] || masks.head[i] || masks.arms[i]) ? 1 : 0;
+      masks.fixedUnion = u;
+      masks.torsoNorm = computeScanlineNormals(masks.torsoLegs, Math.round(S.crotchY - 6));
+      masks.armNorm = computeScanlineNormals(masks.arms, 9999);
+      masks.headNorm = computeScanlineNormals(masks.head, 9999, S.headCenterY, S.headRy);
+      masks.softSideBust = null; masks.softSideGlute = null;
+      masks.softDom = rasterizeBezierMask((c) => view === 'front' ? traceBustFrontBezier(c) : traceGlutesBackBezier(c));
+      masks.peekDom = view === 'back' ? rasterizeBezierMask((c) => { for (const s of [-1, 1]) { c.beginPath(); c.ellipse(CX + s * 36, S.bustCenterY + 3, 17, 27, s * -0.1, 0, Math.PI * 2); c.fill(); } }) : u8();
+    }
+
+    function getZipperOpeningHalfWidth(y, zipPct) {
+      if (zipPct <= 0.5) return 0;
+      const z = zipPct / 100, topY = SKEL.neckMidY, botY = topY + 6 + z * (SKEL.waistY - topY - 4);
+      if (y < topY || y > botY) return 0;
+      const t = (y - topY) / Math.max(1, botY - topY);
+      return (1 - t) * (21.5 * z) * (0.68 + 0.42 * Math.sin((1 - t) * Math.PI * 0.72 + 0.24));
+    }
+
+    function getFixedNormal(idx, inHead, inArm) {
+      const m = inHead ? masks.headNorm : (inArm ? masks.armNorm : masks.torsoNorm);
+      return [m.nx[idx], m.ny[idx], m.nz[idx]];
+    }
+
+    function buildBaseAndLingerieLayers(view) {
+      const S = SKEL, isFront = view === 'front', isSide = view === 'side';
+      for (let y = 30; y < H; y++) {
+        const row = y * W;
+        for (let x = 20; x < W - 20; x++) {
+          const idx = row + x;
+          if (!isSide && masks.claws[idx]) { garmentLayers.fixedBody[idx] = ((x + y) & 3) === 0 ? PAL.clawHi : PAL.claw; continue; }
+          if (!masks.fixedUnion[idx]) continue;
+          const inArm = !isSide && masks.arms[idx] && !masks.torsoLegs[idx];
+          const inHead = masks.head[idx] && y < S.chinY + 2;
+          const [nx, ny, nz] = getFixedNormal(idx, inHead, inArm), ax = Math.abs(x - CX);
+          let extraSh = (y >= S.chinY - 2 && y <= S.chinY + 6 && (!isSide ? ax < 14 : Math.abs(x - SX) < 16)) ? 0.36 : 0;
+          if (isFront) {
+            if (y > S.bustBotY - 3 && y < S.bustBotY + 8 && ax < 40) extraSh = Math.max(extraSh, 0.22);
+            if (y > S.crotchY - 10 && y < S.crotchY + 4 && ax < 14) extraSh = Math.max(extraSh, 0.22);
+          } else if (!isSide) {
+            if (y > S.shoulderY + 6 && y < S.waistY + 4 && ax <= 1.5) extraSh = 0.22;
+            if (y > S.gluteCenterY + S.gluteRy - 2 && y < S.gluteCenterY + S.gluteRy + 8 && ax < 48) extraSh = 0.26;
+          }
+          garmentLayers.fixedBody[idx] = shadeMaterial3D(x, y, nx, ny, nz, 'skin', extraSh);
+          if (!inHead && !inArm && y >= S.neckMidY - 2 && y <= S.neckMidY + 3 && (!isSide ? ax < 13 : Math.abs(x - SX) < 15)) {
+            garmentLayers.fixedBody[idx] = (y === Math.round(S.neckMidY)) ? PAL.latexMid : PAL.latexDeep;
+          }
+          if (inHead || inArm) continue;
+
+          const stockTop = isSide ? (232 + (x - SX) * 0.28) : (isFront ? (S.thighBandY + 5) : (S.thighBandY + 14));
+          const scallop = Math.sin(x * 0.68) * 1.8;
+          if (y >= stockTop + scallop * 0.45) garmentLayers.fixedMedias[idx] = shadeMaterial3D(x, y, nx, ny, nz, 'latex', extraSh, 0.9);
+          else if (y >= stockTop - 6 + scallop) garmentLayers.fixedMedias[idx] = ((x & 3) === 0 && y < stockTop - 2) ? PAL.whiteShadow : (nx < 0.25 ? PAL.whitePure : PAL.whiteShadow);
+          const onStrap = isSide ? (y >= 186 && y < stockTop - 2 && Math.abs(x - (SX - 8)) <= 1.4) : (y >= (isFront ? S.waistY + 14 : S.gluteCenterY + 12) && y < stockTop - 2 && Math.abs(ax - 22) <= 1.4);
+          if (onStrap) garmentLayers.fixedMedias[idx] = (y >= stockTop - 6 && y <= stockTop - 3) ? PAL.silverHi : PAL.latexDeep;
+
+          if (isSide) {
+            const topP = 178 - (x - SX) * 0.22, botP = 224 + (x - SX) * 0.14;
+            if (y >= topP && y <= botP && x < SX + 24) garmentLayers.fixedBraga[idx] = (y - topP < 2.4 || botP - y < 2.4) ? PAL.whitePure : shadeMaterial3D(x, y, nx, ny, nz, 'latex', 0, 0.75);
+          } else if (y >= S.waistBandTopY + 4 && y <= S.crotchY + 12) {
+            const topCurve = (S.waistBandTopY + 10) + Math.pow(ax / 56, 1.45) * 8;
+            const botCut = isFront ? (S.crotchY + 6) - Math.pow(ax / 38, 1.15) * 28 : (S.crotchY + 2) - Math.pow(ax / 48, 1.2) * 18;
+            if (y >= topCurve && y <= botCut) garmentLayers.fixedBraga[idx] = (y - topCurve < 2.4 || botCut - y < 2.3) ? (nx < 0.2 ? PAL.whitePure : PAL.whiteShadow) : shadeMaterial3D(x, y, nx, ny, nz, 'latex', 0, 0.75);
+            if (isFront && Math.abs(y - (S.waistBandTopY + 14)) <= 1.8 && ax <= 4 && (ax <= 1.5 || Math.abs(y - (S.waistBandTopY + 14)) <= 0.9)) garmentLayers.fixedBraga[idx] = PAL.whitePure;
+          }
+
+          if (isSide) {
+            if (y >= 92 && y <= 122 && Math.abs(x - (SX - 2)) <= 1.8) garmentLayers.fixedSosten[idx] = PAL.latexDeep;
+            if (y >= 132 && y <= 145 && x >= SX - 18) garmentLayers.fixedSosten[idx] = (y <= 133 || y >= 144) ? PAL.whiteShadow : shadeMaterial3D(x, y, nx, ny, nz, 'latex', 0, 0.65);
+          } else if (y >= S.shoulderY - 2 && y <= S.bustCenterY + 14) {
+            const sPos = isFront ? lerp(20, 23, clamp((y - S.shoulderY) / 26, 0, 1)) : lerp(19, 17, clamp((y - S.shoulderY) / 36, 0, 1));
+            if (y >= S.shoulderY && y <= (isFront ? S.bustTopY + 16 : S.bustCenterY - 2) && Math.abs(ax - sPos) <= 1.5) garmentLayers.fixedSosten[idx] = PAL.latexDeep;
+            if (!isFront && y >= S.bustCenterY - 4 && y <= S.bustCenterY + 9 && ax < 36) {
+              if (ax <= 2.2 && y >= S.bustCenterY - 1 && y <= S.bustCenterY + 6) garmentLayers.fixedSosten[idx] = Math.abs(y - (S.bustCenterY + 2.5)) < 1 ? PAL.silverHi : PAL.silverMid;
+              else garmentLayers.fixedSosten[idx] = (y === Math.round(S.bustCenterY - 4) || y === Math.round(S.bustCenterY + 9)) ? PAL.whiteShadow : shadeMaterial3D(x, y, nx, ny, nz, 'latex', 0, 0.65);
+            }
+          }
+        }
+      }
+
+      if (isSide) {
+        for (let y = 84; y <= 244; y++) {
+          const row = y * W;
+          for (let x = SX - 48; x <= SX + 26; x++) {
+            const idx = row + x;
+            if (masks.claws[idx]) { garmentLayers.frontArmBody[idx] = ((x + y) & 3) === 0 ? PAL.clawHi : PAL.claw; continue; }
+            if (masks.arms[idx]) garmentLayers.frontArmBody[idx] = shadeMaterial3D(x, y, masks.armNorm.nx[idx], masks.armNorm.ny[idx], masks.armNorm.nz[idx], 'skin', 0);
+          }
+        }
+        applyOutline(garmentLayers.frontArmBody, PAL.outline, SX - 50, 82, SX + 28, 246);
+      }
+
+      if (isFront) {
+        const y0 = Math.floor(S.bustTopY - 4), y1 = Math.ceil(S.bustBotY + 8), x0 = Math.floor(CX - S.bustCenterX - S.bustRx - 6), x1 = Math.ceil(CX + S.bustCenterX + S.bustRx + 6);
+        for (let y = y0; y <= y1; y++) {
+          const row = y * W;
+          for (let x = x0; x <= x1; x++) {
+            const idx = row + x; if (!masks.softDom[idx]) continue;
+            const s = x < CX ? -1 : 1, bx = CX + s * S.bustCenterX, u = clamp((x - bx) / S.bustRx, -.96, .96), v = clamp((y - S.bustCenterY) / S.bustRy, -.96, .96);
+            const r2 = Math.min(.95, u * u + v * v), nz = Math.sqrt(1 - r2), cleft = smoothstep(5.5, 0, Math.abs(x - CX)) * 0.36;
+            garmentLayers.softBody[idx] = shadeMaterial3D(x, y, u, v, nz, 'skin', cleft + (v > .56 ? .22 : 0));
+            const cupTopV = -.44 + Math.pow(Math.abs(u - s * .05), 1.6) * .38 + smoothstep(13, 0, Math.abs(x - CX)) * .44;
+            if (v >= cupTopV) garmentLayers.softSosten[idx] = (v - cupTopV < .088 || (r2 > .84 && v > .35)) ? (u < .2 ? PAL.whitePure : PAL.whiteShadow) : shadeMaterial3D(x, y, u, v, nz, 'latex', cleft, .95);
+            if (Math.abs(x - CX) <= 4 && Math.abs(y - (S.bustCenterY + 6)) <= 2 && (Math.abs(x - CX) <= 1.4 || Math.abs(y - (S.bustCenterY + 6)) <= .9)) garmentLayers.softSosten[idx] = PAL.whitePure;
+          }
+        }
+        applyOutline(garmentLayers.softBody, PAL.outline, x0 - 2, y0 - 2, x1 + 2, y1 + 2);
+        applyOutline(garmentLayers.softSosten, PAL.outline, x0 - 2, y0 - 2, x1 + 2, y1 + 2);
+      } else if (isSide) {
+        for (let y = 92; y <= 178; y++) {
+          const row = y * W;
+          for (let x = SX - 86; x <= SX - 4; x++) {
+            const idx = row + x; if (!masks.softSideBust[idx]) continue;
+            const u = clamp((x - S.sideBustX) / S.sideBustRx, -.96, .96), v = clamp((y - S.sideBustY) / S.sideBustRy, -.96, .96), nz = Math.sqrt(1 - Math.min(.95, u * u + v * v));
+            garmentLayers.softBody[idx] = shadeMaterial3D(x, y, u, v, nz, 'skin', v > .58 ? .24 : 0);
+            const cupTopV = -.35 + u * .25;
+            if (v >= cupTopV) garmentLayers.softSosten[idx] = (v - cupTopV < .085) ? PAL.whitePure : shadeMaterial3D(x, y, u, v, nz, 'latex', 0, .95);
+          }
+        }
+        for (let y = 160; y <= 236; y++) {
+          const row = y * W;
+          for (let x = SX; x <= SX + 62; x++) {
+            const idx = row + x; if (!masks.softSideGlute[idx]) continue;
+            const u = clamp((x - S.sideGluteX) / S.sideGluteRx, -.96, .96), v = clamp((y - S.sideGluteY) / S.sideGluteRy, -.96, .96), nz = Math.sqrt(1 - Math.min(.95, u * u + v * v));
+            garmentLayers.softBody[idx] = shadeMaterial3D(x, y, u, v, nz, 'skin', v > .56 ? .25 : 0);
+            const topP = 172 - (x - SX) * .06, botP = 220 - Math.max(0, x - SX - 24) * .45;
+            if (y >= topP && y <= botP) garmentLayers.softBraga[idx] = (y - topP < 2.4 || botP - y < 2.4) ? PAL.whitePure : shadeMaterial3D(x, y, u, v, nz, 'latex', 0, .85);
+          }
+        }
+        applyOutline(garmentLayers.softBody, PAL.outline, SX - 88, 90, SX + 64, 238);
+        applyOutline(garmentLayers.softSosten, PAL.outline, SX - 88, 90, SX, 180);
+      } else {
+        const y0 = Math.floor(S.gluteCenterY - S.gluteRy - 4), y1 = Math.ceil(S.gluteCenterY + S.gluteRy + 6), x0 = Math.floor(CX - S.gluteCenterX - S.gluteRx - 6), x1 = Math.ceil(CX + S.gluteCenterX + S.gluteRx + 6);
+        for (let y = y0; y <= y1; y++) {
+          const row = y * W;
+          for (let x = x0; x <= x1; x++) {
+            const idx = row + x; if (!masks.softDom[idx]) continue;
+            const s = x < CX ? -1 : 1, gx = CX + s * S.gluteCenterX, u = clamp((x - gx) / S.gluteRx, -.96, .96), v = clamp((y - S.gluteCenterY) / S.gluteRy, -.96, .96);
+            const nz = Math.sqrt(1 - Math.min(.95, u * u + v * v)), ax = Math.abs(x - CX), cleft = smoothstep(8, 0, ax) * smoothstep(-.68, .28, v) * .46;
+            garmentLayers.softBody[idx] = shadeMaterial3D(x, y, u, v, nz, 'skin', cleft + (v > .54 ? .22 : 0));
+            if (y >= S.gluteCenterY + 6 && Math.abs(ax - 22) <= 1.35) garmentLayers.softMedias[idx] = PAL.latexDeep;
+            const topCut = (S.gluteCenterY - S.gluteRy + 6) + ax * .07, botCut = (S.gluteCenterY + 20) - Math.pow(ax / 42, 1.45) * 30 + smoothstep(15, 0, ax) * 7;
+            if (y >= topCut && y <= botCut) garmentLayers.softBraga[idx] = (y - topCut < 2.2 || botCut - y < 2.2) ? (u < .2 ? PAL.whitePure : PAL.whiteShadow) : shadeMaterial3D(x, y, u, v, nz, 'latex', cleft * .85, .8);
+          }
+        }
+        applyOutline(garmentLayers.softBody, PAL.outline, x0 - 2, y0 - 2, x1 + 2, y1 + 2);
+        for (let y = Math.floor(S.bustTopY); y <= Math.ceil(S.bustBotY + 6); y++) {
+          const row = y * W;
+          for (let x = CX - 58; x <= CX + 58; x++) {
+            const idx = row + x; if (!masks.peekDom[idx] || Math.abs(x - CX) < 20) continue;
+            const s = x < CX ? -1 : 1, u = clamp((x - (CX + s * 36)) / 18, -.95, .95), v = clamp((y - S.bustCenterY) / 28, -.95, .95), nz = Math.sqrt(Math.max(.05, 1 - Math.min(.95, u * u + v * v)));
+            garmentLayers.peekBody[idx] = shadeMaterial3D(x, y, u, v, nz, 'skin', .16);
+            if (y >= S.bustCenterY - 12) garmentLayers.peekSosten[idx] = y <= S.bustCenterY - 9 ? PAL.whiteShadow : shadeMaterial3D(x, y, u, v, nz, 'latex', .16, .8);
+          }
+        }
+        applyOutline(garmentLayers.peekBody, PAL.outline, CX - 60, Math.floor(S.bustTopY) - 2, CX + 60, Math.ceil(S.bustBotY) + 8);
+      }
+      applyOutline(garmentLayers.fixedBody, PAL.outline, 18, 32, W - 19, H - 1);
+    }
+
+    function buildSuitLayer(view, suit, zipPct) {
+      for (const k of ['fixedTraje','frontArmTraje','softTraje','peekTraje','skirtCloth','headAcc']) garmentLayers[k].fill(0);
+      if (suit === 'none') return;
+      const S = SKEL, isFront = view === 'front', isSide = view === 'side';
+      const isOrig = suit === 'original', isMaid = suit === 'maid', isMarfil = suit === 'marfil';
+      const mat = isMarfil ? 'ivory' : isMaid ? 'velvet' : 'latex';
+      const bandHi = isMarfil ? PAL.goldHi : PAL.whitePure, bandSh = isMarfil ? PAL.goldMid : PAL.whiteShadow, xColor = isMarfil ? PAL.goldHi : PAL.whitePure;
+      const zipLight = isMarfil ? PAL.goldHi : PAL.silverHi, zipMid = isMarfil ? PAL.goldMid : PAL.silverMid, zipDark = isMarfil ? PAL.goldDark : PAL.silverDark;
+      const suitFixedMask = u8(), zipTipY = S.neckMidY + 5 + (zipPct / 100) * (S.waistY - S.neckMidY - 5);
+
+      for (let y = Math.floor(S.neckTopY); y < H; y++) {
+        const row = y * W, openHalf = isFront ? getZipperOpeningHalfWidth(y, zipPct) : 0;
+        for (let x = 20; x < W - 20; x++) {
+          const idx = row + x;
+          if (!masks.fixedUnion[idx] || (!isSide && masks.claws[idx]) || (masks.head[idx] && y < S.chinY)) continue;
+          const ax = Math.abs(x - CX);
+          if (isFront && openHalf > 0.5 && ax < openHalf && y <= S.waistY + 6) continue;
+          const inArm = !isSide && masks.arms[idx] && !masks.torsoLegs[idx];
+          const [nx, ny, nz] = getFixedNormal(idx, false, inArm);
+
+          if (isMaid && !inArm && y > (isSide ? 222 : S.crotchY + 4)) {
+            const maidTop = isSide ? (236 + (x - SX) * 0.25) : (S.thighBandY + 12);
+            if (y >= maidTop) {
+              garmentLayers.fixedTraje[idx] = y < maidTop + 6 + Math.sin(x * 0.72) * 1.8
+                ? (((x & 3) === 0) ? PAL.whiteShadow : (nx < 0.25 ? PAL.whitePure : PAL.whiteShadow))
+                : shadeMaterial3D(x, y, nx, ny, nz, 'velvet', 0);
+              suitFixedMask[idx] = 1;
+            }
+            continue;
+          }
+
+          suitFixedMask[idx] = 1;
+          let col = shadeMaterial3D(x, y, nx, ny, nz, mat, (isFront && y >= S.waistBandBotY - 2 && y <= S.crotchY + 5 && ax < 18) ? 0.25 : 0, isOrig ? 0.92 : 0.75);
+          const lit = nx < 0.30;
+
+          if (!inArm && y <= S.neckBotY + 1 && (!isSide ? ax < 16 : Math.abs(x - SX) < 16)) {
+            if (isMaid) col = (y >= S.neckBotY - 1 || ((x + (y & 1)) & 3) < 2) ? PAL.whitePure : PAL.whiteShadow;
+            else if (isMarfil && y >= S.neckMidY - 1 && y <= S.neckBotY - 1) col = (!isSide && ax < 3 && y === Math.round(S.neckMidY + 2)) ? PAL.lilacTrim : (lit ? PAL.goldHi : PAL.goldMid);
+            else col = (y >= S.neckMidY - 1 && y <= S.neckBotY - 2) ? (lit ? bandHi : bandSh) : PAL.latexDeep;
+          }
+
+          if (inArm) {
+            const armSlope = (ax - S.shoulderX) * 0.44, biY = S.bicepBandY - armSlope * 0.42, wrY = S.wristBandY - (ax - S.wristX) * 0.44;
+            if (isMaid) {
+              const puffEnd = S.bicepBandY + 11 - armSlope * 0.4;
+              if (y > puffEnd && y < wrY - 8) { suitFixedMask[idx] = 0; continue; }
+              if (Math.abs(y - puffEnd) <= 4.5 || Math.abs(y - (wrY - 2)) <= 6.2) col = Math.sin(x * 0.8 + y * 0.5) > 0 ? PAL.whitePure : PAL.whiteShadow;
+            } else if (isMarfil) {
+              if (Math.abs(y - biY) <= 4.5 && y < S.elbowY - 12) col = Math.abs(y - biY) < 1.8 ? PAL.goldHi : PAL.goldMid;
+              else if (Math.abs(y - wrY) <= 5.2 && y > S.elbowY + 10 && y < S.palmY - 2) col = Math.abs(y - wrY) < 2 ? PAL.goldHi : PAL.goldMid;
+            } else {
+              if (Math.abs(y - biY) <= 6 && y < S.elbowY - 12) col = Math.abs(y - biY) > 5 ? PAL.latexDeep : (lit ? bandHi : bandSh);
+              else if (Math.abs(y - wrY) <= 6.2 && y > S.elbowY + 10 && y < S.palmY - 2) col = Math.abs(y - wrY) > 5.2 ? PAL.latexDeep : (lit ? bandHi : bandSh);
+            }
+          } else if (isSide) {
+            if (isOrig || isMarfil) {
+              const wTop = 171 - (x - SX) * 0.34, wBot = wTop + 15, thTop = 231 + (x - SX) * 0.28, thBot = thTop + 16.5;
+              if (y >= wTop && y <= wBot && y >= 154 && y <= 194) col = (y - wTop < 1.2 || wBot - y < 1.2) ? (isMarfil ? PAL.goldDark : PAL.latexDeep) : (lit ? bandHi : bandSh);
+              if (y >= thTop && y <= thBot && y >= 218 && y <= 262) col = (y - thTop < 1.2 || thBot - y < 1.2) ? (isMarfil ? PAL.goldDark : PAL.latexDeep) : (lit ? bandHi : bandSh);
+              if (y >= S.ankleBandY - 3 && y <= S.ankleBandY + 5) col = lit ? bandHi : bandSh;
+            } else if (isMaid) { const bt = 169 - (x - SX) * 0.25; if (y >= bt && y <= bt + 8) col = PAL.whitePure; }
+          } else if (isOrig) {
+            const uCurve = (1 - Math.pow(clamp(ax / 44, 0, 1), 1.75)) * 12, bandTop = S.waistBandTopY + uCurve * .55, bandBot = S.waistBandTopY + 13.5 + uCurve;
+            if (y >= bandTop && y <= bandBot && ax < 48) {
+              col = (y - bandTop < 1.1 || bandBot - y < 1.1) ? PAL.latexDeep : (lit ? bandHi : bandSh);
+              if (isFront && ax <= 2.8 && y <= bandTop + 7.5) col = PAL.latexDeep;
+            }
+            const thY = isFront ? S.thighBandY : S.thighBandY + 10, thArch = Math.pow(ax / 56, 2) * 3.8;
+            if (y >= thY - thArch && y <= thY + S.thighBandH - thArch) col = (y - (thY - thArch) < 1.1 || (thY + S.thighBandH - thArch) - y < 1.1) ? PAL.latexDeep : (lit ? bandHi : bandSh);
+            if (y >= S.ankleBandY - 3.5 && y <= S.ankleBandY + 4.5) col = lit ? bandHi : bandSh;
+          } else if (isMaid) {
+            if (isFront && y >= S.neckBotY && y <= S.waistY + 6 && ax < 14) col = (Math.abs(((y - S.neckBotY) % 10) - 5) < 1.2 && ax < 9) ? PAL.velvetDeep : (lit ? PAL.whitePure : PAL.whiteShadow);
+            const bt = S.waistY - 3 + (1 - clamp(ax / 34, 0, 1)) * 4;
+            if (y >= bt && y <= bt + 8 && ax < 38) col = (y <= bt + 1 || y >= bt + 7) ? PAL.whiteShadow : PAL.whitePure;
+          } else if (isMarfil) {
+            const uCurve = (1 - Math.pow(clamp(ax / 44, 0, 1), 1.75)) * 11, bandTop = S.waistBandTopY + uCurve * .55, bandBot = S.waistBandTopY + 11.5 + uCurve;
+            if (y >= bandTop && y <= bandBot && ax < 48) col = (y - bandTop < 2.2 || bandBot - y < 2.2) ? (lit ? PAL.goldHi : PAL.goldMid) : PAL.silkSheen;
+            const thY = isFront ? S.thighBandY : S.thighBandY + 10, thArch = Math.pow(ax / 56, 2) * 3.8;
+            if (y >= thY - thArch && y <= thY + 11 - thArch) col = (y - (thY - thArch) < 2 || (thY + 11 - thArch) - y < 2) ? (lit ? PAL.goldHi : PAL.goldMid) : PAL.champagne;
+            if (y >= S.ankleBandY - 3 && y <= S.ankleBandY + 4) col = lit ? PAL.goldHi : PAL.goldMid;
+          }
+
+          if (isFront && y >= S.neckMidY - 1 && y <= S.waistBandTopY + 11) {
+            if (openHalf <= 0.5 && ax <= 2.3) col = (((y + (x & 1)) & 1) === 0) ? zipLight : zipDark;
+            else if (openHalf > 0.5 && Math.abs(ax - openHalf) <= 2.1 && y <= zipTipY + 2) col = ((y & 1) === 0) ? zipLight : zipDark;
+            if (Math.abs(y - zipTipY) <= 3.4 && ax <= 3.4) {
+              const ring = Math.hypot(ax, y - (zipTipY + 1.2));
+              col = (ring >= 1.2 && ring <= 2.9) ? zipLight : (ax <= 1.2 ? zipDark : zipMid);
+            }
+          }
+          garmentLayers.fixedTraje[idx] = col;
+        }
+      }
+
+      if (isOrig && (isFront || isSide)) {
+        stampBezierColor(garmentLayers.fixedTraje, suitFixedMask, PAL.latexSpec1, (c) => {
+          if (isFront) { for (const s of [-1, 1]) { c.beginPath(); c.ellipse(CX + s * (S.kneeCenterX - 1.5), S.kneeY - 2, 3, 5, 0, 0, Math.PI * 2); c.fill(); } }
+          else { c.beginPath(); c.ellipse(SX - 18, 279, 2.5, 4.5, -0.1, 0, Math.PI * 2); c.fill(); }
+        });
+        stampBezierColor(garmentLayers.fixedTraje, suitFixedMask, PAL.latexSpec2, (c) => {
+          if (isFront) { for (const s of [-1, 1]) { c.beginPath(); c.ellipse(CX + s * (S.kneeCenterX - 2), S.kneeY - 3, 1.3, 2.3, 0, 0, Math.PI * 2); c.fill(); } }
+          else { c.beginPath(); c.ellipse(SX - 19, 278, 1.1, 2, 0, 0, Math.PI * 2); c.fill(); }
+        });
+      }
+      if (isMaid && isFront) {
+        stampBezierColor(garmentLayers.fixedTraje, null, PAL.ribbonBase, (c) => {
+          c.beginPath(); c.ellipse(CX - 7, S.neckBotY + 3, 6.5, 4, -.25, 0, Math.PI * 2); c.ellipse(CX + 7, S.neckBotY + 3, 6.5, 4, .25, 0, Math.PI * 2); c.fill();
+          c.beginPath(); c.moveTo(CX - 2, S.neckBotY + 5); c.lineTo(CX - 8, S.neckBotY + 14); c.lineTo(CX - 3, S.neckBotY + 14); c.closePath();
+          c.moveTo(CX + 2, S.neckBotY + 5); c.lineTo(CX + 8, S.neckBotY + 14); c.lineTo(CX + 3, S.neckBotY + 14); c.closePath(); c.fill();
+        });
+        stampBezierColor(garmentLayers.fixedTraje, null, PAL.ribbonHi, (c) => { c.beginPath(); c.arc(CX, S.neckBotY + 3, 2.4, 0, Math.PI * 2); c.fill(); });
+      }
+
+      if (!isSide) {
+        if (!isMaid) {
+          stampBezierColor(garmentLayers.fixedTraje, masks.arms, isMarfil ? PAL.goldHi : PAL.whitePure, (c) => { traceFingerTipsWhiteFrontBack(c, -1); traceFingerTipsWhiteFrontBack(c, 1); });
+          stampBezierColor(garmentLayers.fixedTraje, masks.arms, xColor, (c) => { for (const s of [-1, 1]) traceSharpCurvedX(c, CX + s * (S.palmX + 1.5), S.palmY + 0.5, 4.5, 4.8, 0, 0, 0.95); });
+        } else {
+          stampBezierColor(garmentLayers.fixedTraje, masks.arms, PAL.ribbonBase, (c) => { for (const s of [-1, 1]) { c.beginPath(); c.ellipse(CX + s * (S.wristX + 2), S.wristBandY + 1, 3.8, 2.2, s * 0.4, 0, Math.PI * 2); c.fill(); } });
+        }
+        if (isFront && (isOrig || isMarfil)) stampBezierColor(garmentLayers.fixedTraje, suitFixedMask, xColor, (c) => { for (const s of [-1, 1]) traceSharpCurvedX(c, CX + s * 36.5, S.hipPeakY - 2, 9.2, 11.2, s * 1.2, 0.6, 1.35); });
+      } else {
+        const sideArmMask = u8();
+        for (let y = 84; y <= 232; y++) {
+          const row = y * W;
+          for (let x = SX - 46; x <= SX + 24; x++) {
+            const idx = row + x; if (!masks.arms[idx] || masks.claws[idx]) continue;
+            const nx = masks.armNorm.nx[idx], ny = masks.armNorm.ny[idx], nz = masks.armNorm.nz[idx], lit = nx < 0.3;
+            if (isMaid) {
+              if (y > 120 && y < 156) continue;
+              sideArmMask[idx] = 1;
+              garmentLayers.frontArmTraje[idx] = (Math.abs(y - 118) <= 4.5 || Math.abs(y - 160) <= 5.5) ? (Math.sin(x * .8 + y * .5) > 0 ? PAL.whitePure : PAL.whiteShadow) : shadeMaterial3D(x, y, nx, ny, nz, 'velvet', 0);
+              continue;
+            }
+            sideArmMask[idx] = 1;
+            let col = shadeMaterial3D(x, y, nx, ny, nz, mat, 0, isOrig ? 0.95 : 0.78);
+            const biCurve = 98 + Math.pow((x - (SX + 2)) / 14, 2) * 5.5, wrCurve = 158 + (x - (SX - 12)) * 0.14;
+            if (y >= biCurve && y <= biCurve + 10.5 && y < 120) col = (y - biCurve < 1 || biCurve + 10.5 - y < 1) ? PAL.latexDeep : (lit ? bandHi : bandSh);
+            if (y >= wrCurve && y <= wrCurve + 12.5 && y > 148 && y < 176) col = (y - wrCurve < 1 || wrCurve + 12.5 - y < 1) ? PAL.latexDeep : (lit ? bandHi : bandSh);
+            garmentLayers.frontArmTraje[idx] = col;
+          }
+        }
+        if (!isMaid) {
+          stampBezierColor(garmentLayers.frontArmTraje, sideArmMask, isMarfil ? PAL.goldHi : PAL.whitePure, traceFingerTipsWhiteSide);
+          stampBezierColor(garmentLayers.frontArmTraje, sideArmMask, xColor, (c) => traceSharpCurvedX(c, SX - 18.5, 184, 7.2, 7.6, -0.6, 0.3, 1.2));
+          for (const [kx, ky] of [[SX-28,194],[SX-22,195],[SX-16,195],[SX-10,194]]) for (let dy = 0; dy <= 3; dy++) if (sideArmMask[(ky + dy) * W + kx]) garmentLayers.frontArmTraje[(ky + dy) * W + kx] = xColor;
+        } else {
+          stampBezierColor(garmentLayers.frontArmTraje, sideArmMask, PAL.ribbonBase, (c) => { c.beginPath(); c.ellipse(SX - 14, 162, 4.5, 2.5, 0.2, 0, Math.PI * 2); c.fill(); });
+        }
+        applyOutline(garmentLayers.frontArmTraje, PAL.outline, SX - 48, 84, SX + 26, 236);
+      }
+
+      if (isFront) {
+        const bustSuitMask = u8(), y0 = Math.floor(S.bustTopY - 4), y1 = Math.ceil(S.bustBotY + 8), x0 = Math.floor(CX - S.bustCenterX - S.bustRx - 6), x1 = Math.ceil(CX + S.bustCenterX + S.bustRx + 6);
+        for (let y = y0; y <= y1; y++) {
+          const row = y * W, openHalf = getZipperOpeningHalfWidth(y, zipPct);
+          for (let x = x0; x <= x1; x++) {
+            const idx = row + x; if (!masks.softDom[idx]) continue;
+            const ax = Math.abs(x - CX); if (openHalf > 0.5 && ax < openHalf) continue;
+            bustSuitMask[idx] = 1;
+            const s = x < CX ? -1 : 1, bx = CX + s * S.bustCenterX, u = clamp((x - bx) / S.bustRx, -.96, .96), v = clamp((y - S.bustCenterY) / S.bustRy, -.96, .96);
+            const r2 = Math.min(.95, u * u + v * v), nz = Math.sqrt(1 - r2), cleft = smoothstep(5.5, 0, ax) * .34;
+            let col = shadeMaterial3D(x, y, u, v, nz, mat, cleft + (v > .62 ? .22 : 0), isOrig ? 1.15 : .85);
+            if (isMaid) {
+              const heartTop = -.58 + Math.pow(Math.abs(u), 1.5) * .32 + smoothstep(14, 0, ax) * .28;
+              if (v < heartTop) col = ((x + y) & 2) ? PAL.whitePure : PAL.whiteShadow;
+              else if (v - heartTop < .11) col = PAL.whitePure;
+              else if (ax < 10 && openHalf <= .5) col = Math.abs(((y - S.bustTopY) % 9) - 4.5) < 1.3 ? PAL.ribbonBase : (ax < 6 ? PAL.whitePure : PAL.velvetDeep);
+              if (openHalf > .5 && Math.abs(ax - openHalf) < 5 && y <= zipTipY + 2) col = ((y & 3) < 2) ? PAL.whitePure : PAL.whiteShadow;
+            } else if (isMarfil) {
+              if (r2 > .84 && v > .45) col = PAL.goldMid;
+              else if (openHalf > .5 && Math.abs(ax - openHalf) < 4.5 && y <= zipTipY + 2) col = PAL.goldHi;
+            }
+            garmentLayers.softTraje[idx] = col;
+          }
+        }
+        if (isOrig || isMarfil) {
+          stampBezierColor(garmentLayers.softTraje, bustSuitMask, xColor, (c) => {
+            for (const s of [-1, 1]) {
+              const bx = CX + s * S.bustCenterX, by = S.bustCenterY;
+              traceTaperedArc(c, bx - s * 7.5, by - 3.5, bx + s * 12, by + 15, bx + s * 22, by + 28, 1.55);
+              traceTaperedArc(c, bx + s * 30, by + 2, bx + s * 18.5, by + 22, bx - s * 2, by + 32.5, 1.55);
+            }
+          });
+          if (isMarfil) stampBezierColor(garmentLayers.softTraje, bustSuitMask, PAL.lilacTrim, (c) => {
+            for (const s of [-1, 1]) { const cxX = CX + s * (S.bustCenterX + 14.5), cyX = S.bustCenterY + 17.5; c.beginPath(); c.moveTo(cxX, cyX - 3.2); c.lineTo(cxX + 2.6, cyX); c.lineTo(cxX, cyX + 3.2); c.lineTo(cxX - 2.6, cyX); c.closePath(); c.fill(); }
+          });
+        }
+        if (isOrig && zipPct < 35) for (const wy of [151,156,161,166]) for (let dx = -9; dx <= 9; dx++) if (Math.abs(dx) >= 3 && bustSuitMask[wy * W + CX + dx]) garmentLayers.softTraje[wy * W + CX + dx] = Math.abs(dx) < 6 ? PAL.latexRim : PAL.latexMid;
+        for (let y = y0; y <= y1; y++) {
+          const row = y * W, openHalf = getZipperOpeningHalfWidth(y, zipPct);
+          for (let x = CX - 26; x <= CX + 26; x++) {
+            const idx = row + x; if (!bustSuitMask[idx]) continue;
+            const ax = Math.abs(x - CX);
+            if (openHalf <= .5) { if (ax <= 2.3) garmentLayers.softTraje[idx] = (((y + (x & 1)) & 1) === 0) ? zipLight : zipDark; }
+            else if (Math.abs(ax - openHalf) <= 2.1 && y <= zipTipY + 2) garmentLayers.softTraje[idx] = ((y & 1) === 0) ? zipLight : zipDark;
+            else if (y > zipTipY && ax <= 2.3) garmentLayers.softTraje[idx] = (((y + (x & 1)) & 1) === 0) ? zipLight : zipDark;
+            if (Math.abs(y - zipTipY) <= 3.5 && ax <= 3.5) { const ring = Math.hypot(ax, y - (zipTipY + 1.2)); garmentLayers.softTraje[idx] = (ring >= 1.2 && ring <= 3) ? zipLight : (ax <= 1.2 ? zipDark : zipMid); }
+          }
+        }
+        applyOutline(garmentLayers.softTraje, PAL.outline, x0 - 2, y0 - 2, x1 + 2, y1 + 2);
+      } else if (isSide) {
+        const sideBustMask = u8();
+        for (let y = 92; y <= 178; y++) {
+          const row = y * W;
+          for (let x = SX - 86; x <= SX - 4; x++) {
+            const idx = row + x; if (!masks.softSideBust[idx]) continue;
+            sideBustMask[idx] = 1;
+            const u = clamp((x - S.sideBustX) / S.sideBustRx, -.96, .96), v = clamp((y - S.sideBustY) / S.sideBustRy, -.96, .96), nz = Math.sqrt(1 - Math.min(.95, u * u + v * v));
+            let col = shadeMaterial3D(x, y, u, v, nz, mat, v > .62 ? .22 : 0, isOrig ? 1.15 : .85);
+            if (isMaid && v < -.52) col = ((x + y) & 2) ? PAL.whitePure : PAL.whiteShadow;
+            garmentLayers.softTraje[idx] = col;
+          }
+        }
+        if (isOrig || isMarfil) stampBezierColor(garmentLayers.softTraje, sideBustMask, xColor, (c) => {
+          traceTaperedArc(c, SX - 66, 128, SX - 74, 146, SX - 76, 159, 1.35);
+          traceTaperedArc(c, SX - 79, 145, SX - 73, 157, SX - 58, 166, 1.25);
+        });
+        if (!isMaid) {
+          const sideGluteMask = u8();
+          for (let y = 160; y <= 236; y++) {
+            const row = y * W;
+            for (let x = SX; x <= SX + 62; x++) {
+              const idx = row + x; if (!masks.softSideGlute[idx]) continue;
+              sideGluteMask[idx] = 1;
+              const u = clamp((x - S.sideGluteX) / S.sideGluteRx, -.96, .96), v = clamp((y - S.sideGluteY) / S.sideGluteRy, -.96, .96), nz = Math.sqrt(1 - Math.min(.95, u * u + v * v));
+              let col = shadeMaterial3D(x, y, u, v, nz, mat, v > .60 ? .24 : 0, isOrig ? 1.20 : .85);
+              if (y <= 174 - (x - SX) * .24 && x < SX + 28) col = u < .2 ? bandHi : bandSh;
+              garmentLayers.softTraje[idx] = col;
+            }
+          }
+          if (isOrig || isMarfil) stampBezierColor(garmentLayers.softTraje, sideGluteMask, xColor, (c) => {
+            traceTaperedArc(c, SX + 46, 186, SX + 54, 198, SX + 53, 212, 1.1);
+            traceTaperedArc(c, SX + 55, 193, SX + 52, 204, SX + 43, 214, 1.0);
+          });
+        }
+        applyOutline(garmentLayers.softTraje, PAL.outline, SX - 88, 90, SX + 64, 238);
+      } else {
+        const gluteSuitMask = u8(), y0 = Math.floor(S.gluteCenterY - S.gluteRy - 4), y1 = Math.ceil(S.gluteCenterY + S.gluteRy + 6), x0 = Math.floor(CX - S.gluteCenterX - S.gluteRx - 6), x1 = Math.ceil(CX + S.gluteCenterX + S.gluteRx + 6);
+        if (!isMaid) {
+          for (let y = y0; y <= y1; y++) {
+            const row = y * W;
+            for (let x = x0; x <= x1; x++) {
+              const idx = row + x; if (!masks.softDom[idx]) continue;
+              gluteSuitMask[idx] = 1;
+              const s = x < CX ? -1 : 1, gx = CX + s * S.gluteCenterX, u = clamp((x - gx) / S.gluteRx, -.96, .96), v = clamp((y - S.gluteCenterY) / S.gluteRy, -.96, .96);
+              const nz = Math.sqrt(1 - Math.min(.95, u * u + v * v)), ax = Math.abs(x - CX), cleft = smoothstep(8, 0, ax) * smoothstep(-.68, .28, v) * .44;
+              let col = shadeMaterial3D(x, y, u, v, nz, mat, cleft + (v > .58 ? .22 : 0), isOrig ? 1.15 : .85);
+              if (y <= S.waistBandTopY + 13 + (1 - Math.pow(clamp(ax / 44, 0, 1), 1.8)) * 5) col = u < .2 ? bandHi : bandSh;
+              garmentLayers.softTraje[idx] = col;
+            }
+          }
+          if (isOrig || isMarfil) stampBezierColor(garmentLayers.softTraje, gluteSuitMask, xColor, (c) => { for (const s of [-1, 1]) traceSharpCurvedX(c, CX + s * (S.gluteCenterX + 2), S.gluteCenterY + 2, 16.5, 17.5, s * 2.2, 1, 1.45); });
+          applyOutline(garmentLayers.softTraje, PAL.outline, x0 - 2, y0 - 2, x1 + 2, y1 + 2);
+        }
+        for (let y = Math.floor(S.bustTopY); y <= Math.ceil(S.bustBotY + 6); y++) {
+          const row = y * W;
+          for (let x = CX - 58; x <= CX + 58; x++) {
+            const idx = row + x; if (!masks.peekDom[idx] || Math.abs(x - CX) < 20) continue;
+            const s = x < CX ? -1 : 1, u = clamp((x - (CX + s * 36)) / 18, -.95, .95), v = clamp((y - S.bustCenterY) / 28, -.95, .95), nz = Math.sqrt(Math.max(.05, 1 - Math.min(.95, u * u + v * v)));
+            garmentLayers.peekTraje[idx] = shadeMaterial3D(x, y, u, v, nz, mat, .16, .9);
+          }
+        }
+      }
+
+      if (isMaid) {
+        const skirtTopY = isSide ? 166 : S.waistY + 1, skirtBotY = isSide ? 240 : S.thighBandY + 20;
+        const skirtMask = rasterizeBezierMask((c) => {
+          c.beginPath();
+          if (isSide) {
+            c.moveTo(SX - 24, skirtTopY + 4); c.bezierCurveTo(SX - 44, skirtTopY + 24, SX - 48, 214, SX - 42, skirtBotY);
+            for (let i = 0; i < 8; i++) { const xA = lerp(SX - 42, SX + 62, i / 8), xB = lerp(SX - 42, SX + 62, (i + 1) / 8); c.quadraticCurveTo((xA + xB) * .5, skirtBotY + ((i & 1) ? 4.5 : -2), xB, skirtBotY - 1); }
+            c.bezierCurveTo(SX + 66, 206, SX + 46, skirtTopY + 6, SX + 18, skirtTopY - 4);
+          } else {
+            c.moveTo(CX - 28, skirtTopY); c.bezierCurveTo(CX - 54, skirtTopY + 14, CX - 68, S.hipPeakY + 18, CX - 65, skirtBotY - 2);
+            for (let i = 0; i < 10; i++) { const xA = lerp(CX - 65, CX + 65, i / 10), xB = lerp(CX - 65, CX + 65, (i + 1) / 10); c.quadraticCurveTo((xA + xB) * .5, skirtBotY + ((i & 1) ? 4.5 : -2.2), xB, skirtBotY - 1); }
+            c.bezierCurveTo(CX + 68, S.hipPeakY + 18, CX + 54, skirtTopY + 14, CX + 28, skirtTopY);
+          }
+          c.closePath(); c.fill();
+        });
+        const sDist = computeEdgeDistance(skirtMask);
+        for (let y = Math.floor(skirtTopY - 6); y <= Math.ceil(skirtBotY + 8); y++) {
+          const row = y * W, tY = clamp((y - skirtTopY) / Math.max(1, skirtBotY - skirtTopY), 0, 1);
+          for (let x = CX - 72; x <= CX + 72; x++) {
+            const idx = row + x; if (!skirtMask[idx]) continue;
+            const lit = x < CX + 10, pleat = Math.sin((x - CX) * (0.28 - tY * 0.06));
+            let col = pleat > .35 ? PAL.velvetMid : (pleat < -.45 ? PAL.velvetDeep : PAL.velvetBase);
+            if (sDist[idx] <= 3 && !lit) col = PAL.velvetRim;
+            if (y >= skirtBotY - 7 + Math.sin(x * .65) * 2.2) col = ((x & 3) === 0 && y < skirtBotY - 3) ? PAL.whiteShadow : (lit ? PAL.whitePure : PAL.whiteShadow);
+            if (isFront) {
+              const ax = Math.abs(x - CX), apronW = 24 + tY * 18, apBot = skirtBotY - 8 + Math.sin(x * .7) * 2.5;
+              if (ax <= apronW && y <= apBot) {
+                col = (apronW - ax < 3.6 || apBot - y < 4.2) ? PAL.whitePure : (Math.sin((x - CX) * .42) < -.55 ? PAL.whiteShadow : PAL.whitePure);
+                if (Math.abs(ax - 17) <= 3.5 && Math.abs(y - (S.hipPeakY + 4)) <= 2.2) col = PAL.ribbonBase;
+              }
+            } else if (isSide && x < SX - 12 && y <= skirtBotY - 6) col = Math.sin(x * .45) < -.45 ? PAL.whiteShadow : PAL.whitePure;
+            garmentLayers.skirtCloth[idx] = col;
+          }
+        }
+        if (!isFront) {
+          const bowMask = rasterizeBezierMask((c) => {
+            if (isSide) {
+              c.beginPath(); c.ellipse(SX + 36, 174, 15, 11, -.35, 0, Math.PI * 2); c.fill();
+              c.beginPath(); c.moveTo(SX + 28, 178); c.quadraticCurveTo(SX + 54, 198, SX + 62, 224); c.lineTo(SX + 48, 226); c.quadraticCurveTo(SX + 40, 202, SX + 24, 180); c.closePath(); c.fill();
+            } else {
+              c.beginPath(); c.ellipse(CX - 18, S.waistY + 10, 16, 10, -.22, 0, Math.PI * 2); c.ellipse(CX + 18, S.waistY + 10, 16, 10, .22, 0, Math.PI * 2); c.fill();
+              c.beginPath(); c.moveTo(CX - 5, S.waistY + 14); c.quadraticCurveTo(CX - 18, S.hipPeakY + 12, CX - 24, skirtBotY + 2); c.lineTo(CX - 11, skirtBotY - 2); c.quadraticCurveTo(CX - 7, S.hipPeakY + 8, CX - 1, S.waistY + 15); c.closePath(); c.fill();
+              c.beginPath(); c.moveTo(CX + 5, S.waistY + 14); c.quadraticCurveTo(CX + 18, S.hipPeakY + 12, CX + 24, skirtBotY + 2); c.lineTo(CX + 11, skirtBotY - 2); c.quadraticCurveTo(CX + 7, S.hipPeakY + 8, CX + 1, S.waistY + 15); c.closePath(); c.fill();
+              c.beginPath(); c.ellipse(CX, S.waistY + 10, 6.5, 6.2, 0, 0, Math.PI * 2); c.fill();
+            }
+          });
+          for (let y = 158; y <= Math.ceil(skirtBotY + 6); y++) for (let x = CX - 42; x <= CX + 68; x++) if (bowMask[y * W + x]) garmentLayers.skirtCloth[y * W + x] = (y < 204 && x < CX + 50) ? PAL.whitePure : PAL.whiteShadow;
+        }
+        applyOutline(garmentLayers.skirtCloth, PAL.outline, CX - 72, Math.floor(skirtTopY - 8), CX + 72, Math.ceil(skirtBotY + 8));
+
+        const hx = isSide ? SX - 8 : CX, hy = isSide ? 48 : S.headTopY + 14;
+        const headMask = rasterizeBezierMask((c) => {
+          c.lineWidth = 7; c.lineCap = 'round'; c.beginPath(); c.arc(hx, hy, 25, Math.PI * 1.12, Math.PI * 1.88); c.stroke();
+          for (let a = 1.15; a <= 1.86; a += 0.12) { c.beginPath(); c.arc(hx + Math.cos(a * Math.PI) * 28.5, hy + Math.sin(a * Math.PI) * 28.5, 3.4, 0, Math.PI * 2); c.fill(); }
+        });
+        for (let i = 0; i < PIXEL_COUNT; i++) if (headMask[i]) {
+          const x = i % W, y = (i / W) | 0;
+          garmentLayers.headAcc[i] = Math.hypot(x - hx, y - hy) < 23.5 ? PAL.velvetDeep : (x < hx + 6 ? PAL.whitePure : PAL.whiteShadow);
+        }
+        stampBezierColor(garmentLayers.headAcc, null, PAL.ribbonBase, (c) => { c.beginPath(); c.ellipse(hx - 23, hy - 8, 4.5, 2.8, -.5, 0, Math.PI * 2); c.ellipse(hx + 23, hy - 8, 4.5, 2.8, .5, 0, Math.PI * 2); c.fill(); });
+        applyOutline(garmentLayers.headAcc, PAL.outline, hx - 42, 12, hx + 42, hy + 8);
+      } else if (isMarfil) {
+        const sashTopY = isSide ? 168 : S.waistY + 2, sashBotY = S.kneeY - 6;
+        const sashMask = rasterizeBezierMask((c) => {
+          if (isSide) {
+            c.beginPath(); c.moveTo(SX - 6, sashTopY + 4); c.bezierCurveTo(SX + 34, sashTopY + 14, SX + 62, 210, SX + 50, sashBotY - 10);
+            c.quadraticCurveTo(SX + 40, sashBotY + 2, SX + 32, sashBotY - 8); c.bezierCurveTo(SX + 36, 224, SX + 26, 198, SX - 10, sashTopY + 14); c.closePath(); c.fill();
+          } else {
+            for (const s of [-1, 1]) {
+              c.beginPath(); c.moveTo(CX + s * 14, sashTopY + 6); c.bezierCurveTo(CX + s * 48, sashTopY + 14, CX + s * 65, S.hipPeakY + 16, CX + s * 58, sashBotY - 12);
+              c.quadraticCurveTo(CX + s * 52, sashBotY + 2, CX + s * 42, sashBotY - 6); c.bezierCurveTo(CX + s * 46, S.thighBandY + 4, CX + s * 40, S.hipPeakY - 4, CX + s * 8, sashTopY + 14); c.closePath(); c.fill();
+            }
+            c.beginPath(); c.ellipse(CX, sashTopY + 10, 8, 5, 0, 0, Math.PI * 2); c.fill();
+          }
+        });
+        const saDist = computeEdgeDistance(sashMask);
+        for (let y = Math.floor(sashTopY); y <= Math.ceil(sashBotY + 4); y++) for (let x = CX - 68; x <= CX + 68; x++) {
+          const idx = y * W + x; if (!sashMask[idx]) continue;
+          let col = saDist[idx] <= 3 ? PAL.goldMid : (Math.sin(y * .24 + (x - CX) * .14) > .35 ? PAL.ivoryHi : PAL.silkSheen);
+          if (saDist[idx] <= 2 && x < CX + 12) col = PAL.goldHi;
+          if (!isSide && Math.hypot(x - CX, y - (sashTopY + 10)) < 4) col = Math.hypot(x - CX, y - (sashTopY + 10)) < 2.2 ? PAL.lilacTrim : PAL.goldHi;
+          garmentLayers.skirtCloth[idx] = col;
+        }
+        applyOutline(garmentLayers.skirtCloth, PAL.outlineSoft, CX - 70, Math.floor(sashTopY - 2), CX + 70, Math.ceil(sashBotY + 6));
+        const tx = isSide ? SX - 10 : CX;
+        stampBezierColor(garmentLayers.headAcc, null, PAL.goldHi, (c) => { c.beginPath(); c.moveTo(tx - 18, S.headTopY + 3); c.quadraticCurveTo(tx - 6, S.headTopY - 9, tx + 6, S.headTopY - 1); c.quadraticCurveTo(tx - 6, S.headTopY - 2, tx - 18, S.headTopY + 3); c.fill(); });
+        stampBezierColor(garmentLayers.headAcc, null, PAL.lilacTrim, (c) => { c.beginPath(); c.arc(tx - 6, S.headTopY - 3, 2.4, 0, Math.PI * 2); c.fill(); });
+        applyOutline(garmentLayers.headAcc, PAL.outline, tx - 26, Math.floor(S.headTopY - 15), tx + 16, Math.ceil(S.headTopY + 12));
+      }
+    }
+
+    // ---- CABELLO CEBRA ESCULTÓRICO CON DELINEADO INTERNO ----
+    function paintHairChunk(mask, zoneId, stripeFn, weightArr, weightFn) {
+      hairChunkBuf.fill(0);
+      const dist = computeEdgeDistance(mask), yMax = Math.ceil(SKEL.chinY + 16);
+      for (let y = 2; y <= yMax; y++) {
+        const row = y * W;
+        for (let x = CX - 64; x <= CX + 64; x++) {
+          const idx = row + x; if (!mask[idx]) continue;
+          hairChunkBuf[idx] = (stripeFn && stripeFn(x, y))
+            ? ((dist[idx] <= 3 && x < CX + 12) ? PAL.hairBlackHi : PAL.hairBlack)
+            : ((dist[idx] <= 3 && x > CX - 4) ? PAL.whiteShadow : PAL.whitePure);
+        }
+      }
+      applyOutline(hairChunkBuf, PAL.outline, CX - 64, 2, CX + 64, yMax);
+      for (let y = 2; y <= yMax; y++) {
+        const row = y * W;
+        for (let x = CX - 64; x <= CX + 64; x++) {
+          const idx = row + x;
+          if (hairChunkBuf[idx] !== 0) {
+            planes.hairRGBA[idx] = hairChunkBuf[idx]; planes.hairZone[idx] = zoneId;
+            if (weightArr) weightArr[idx] = weightFn ? weightFn(x, y) : 0.75;
+          }
+        }
+      }
+    }
+
+    function buildHairLayer(view) {
+      planes.hairRGBA.fill(0); planes.hairZone.fill(0);
+      planes.hairWeightTop.fill(0); planes.hairWeightBangs.fill(0); planes.hairWeightCurl.fill(0); planes.hairWeightBot.fill(0);
+      const S = SKEL;
+
+      if (view === 'front') {
+        const backSpikes = rasterizeBezierMask((c) => {
+          c.beginPath(); c.moveTo(CX - 31, S.cheekY + 4);
+          c.bezierCurveTo(CX - 39, S.headTopY + 14, CX - 34, S.headTopY - 6, CX - 14, S.headTopY - 12);
+          c.quadraticCurveTo(CX - 8, 18, CX - 5, 6); c.quadraticCurveTo(CX + 5, 16, CX + 9, 28);
+          c.quadraticCurveTo(CX + 16, 20, CX + 21, 16); c.quadraticCurveTo(CX + 29, 24, CX + 31, 38);
+          c.quadraticCurveTo(CX + 41, 36, CX + 43, 45); c.quadraticCurveTo(CX + 40, 58, CX + 32, 65);
+          c.lineTo(CX + 40, 68); c.lineTo(CX + 30, 75); c.lineTo(CX + 37, 80); c.quadraticCurveTo(CX + 24, 88, CX + 14, 83);
+          c.lineTo(CX + 16, S.headCenterY); c.quadraticCurveTo(CX, S.headTopY + 8, CX - 19, S.headCenterY);
+          c.lineTo(CX - 16, 84); c.quadraticCurveTo(CX - 28, 88, CX - 36, 78); c.closePath(); c.fill();
+        });
+        const faceCut = rasterizeBezierMask((c) => { c.beginPath(); c.ellipse(CX, S.headCenterY + 1, S.headRx - 1.5, S.headRy - 2, 0, 0, Math.PI * 2); c.fill(); });
+        for (let i = 0; i < PIXEL_COUNT; i++) if (faceCut[i]) backSpikes[i] = 0;
+        paintHairChunk(backSpikes, 5, (x, y) => (y>=11&&y<=18&&x>=CX-13&&x<=CX+5)||(y>=20&&y<=27&&x>=CX+13&&x<=CX+29)||(y>=41&&y<=49&&x>=CX+33)||(y>=66&&y<=72&&x>=CX+28)||(y>=76&&y<=81&&x>=CX+26), planes.hairWeightTop, (x, y) => smoothstep(S.chinY, 6, y) * .92);
+
+        const leftCurl = rasterizeBezierMask((c) => {
+          c.beginPath(); c.moveTo(CX - 27, 50); c.bezierCurveTo(CX - 36, 62, CX - 34, 80, CX - 16, 83);
+          c.quadraticCurveTo(CX - 12, 81, CX - 15, 75); c.quadraticCurveTo(CX - 23, 73, CX - 22, 58); c.closePath(); c.fill();
+        });
+        paintHairChunk(leftCurl, 7, (x, y) => { const s = (y - 54) - (x - (CX - 32)) * 0.52; return (s >= 6 && s <= 12) || (s >= 17 && s <= 23); }, planes.hairWeightCurl, (x, y) => smoothstep(50, 84, y) * .95);
+
+        const bigBangs = rasterizeBezierMask((c) => {
+          c.beginPath(); c.moveTo(CX - 10, 42); c.bezierCurveTo(CX - 2, 23, CX + 31, 24, CX + 33, 52);
+          c.bezierCurveTo(CX + 34, 68, CX + 26, 83, CX + 13, 83); c.quadraticCurveTo(CX + 16, 70, CX + 16, 58);
+          c.bezierCurveTo(CX + 15, 48, CX + 4, 44, CX - 10, 42); c.closePath(); c.fill();
+        });
+        paintHairChunk(bigBangs, 6, (x, y) => { const cy = y - (x - (CX + 16)) * .16 + Math.pow((x - (CX + 16)) / 24, 2) * 5; return (cy >= 38 && cy <= 49) || (cy >= 58 && cy <= 69); }, planes.hairWeightBangs, (x, y) => smoothstep(24, 83, y) * .95);
+      } else if (view === 'side') {
+        const sideSpikes = rasterizeBezierMask((c) => {
+          c.beginPath(); c.moveTo(SX - 10, 42);
+          c.quadraticCurveTo(SX - 4, 18, SX - 6, 6); c.quadraticCurveTo(SX + 8, 12, SX + 11, 24);
+          c.quadraticCurveTo(SX + 16, 15, SX + 21, 12); c.quadraticCurveTo(SX + 31, 20, SX + 30, 34);
+          c.quadraticCurveTo(SX + 38, 33, SX + 38, 45); c.quadraticCurveTo(SX + 35, 58, SX + 25, 68);
+          c.lineTo(SX + 28, 74); c.lineTo(SX + 17, 81); c.quadraticCurveTo(SX + 13, 89, SX + 7, 84);
+          c.lineTo(SX - 6, 78); c.closePath(); c.fill();
+        });
+        paintHairChunk(sideSpikes, 5, (x, y) => (y>=9&&y<=16&&x<=SX+8)||(y>=16&&y<=24&&x>=SX+11&&x<=SX+28)||(y>=37&&y<=45&&x>=SX+26)||(y>=61&&y<=69&&x>=SX+18), planes.hairWeightTop, (x, y) => smoothstep(82, 6, y) * .92);
+
+        const sideForelock = rasterizeBezierMask((c) => {
+          c.beginPath(); c.moveTo(SX - 12, 27); c.bezierCurveTo(SX - 38, 28, SX - 41, 64, SX - 22, 85);
+          c.bezierCurveTo(SX - 5, 74, SX + 4, 46, SX - 12, 27); c.closePath(); c.fill();
+        });
+        paintHairChunk(sideForelock, 6, (x, y) => { const cy = y - (x - (SX - 20)) * .08 + Math.pow((x - (SX - 20)) / 22, 2) * 5; return (cy >= 41 && cy <= 52) || (cy >= 61 && cy <= 72); }, planes.hairWeightBangs, (x, y) => smoothstep(26, 85, y) * .95);
+      } else {
+        const backHair = rasterizeBezierMask((c) => {
+          c.beginPath(); c.moveTo(CX - 34, 78); c.lineTo(CX - 39, 68); c.lineTo(CX - 31, 64);
+          c.quadraticCurveTo(CX - 43, 52, CX - 42, 42); c.quadraticCurveTo(CX - 34, 34, CX - 31, 34);
+          c.quadraticCurveTo(CX - 28, 22, CX - 20, 15); c.quadraticCurveTo(CX - 14, 22, CX - 9, 26);
+          c.quadraticCurveTo(CX - 4, 15, CX + 5, 6); c.quadraticCurveTo(CX + 14, 18, CX + 19, 30);
+          c.bezierCurveTo(CX + 36, 38, CX + 38, 66, CX + 33, 79);
+          c.quadraticCurveTo(CX + 18, 90, CX + 2, 84); c.quadraticCurveTo(CX - 16, 91, CX - 34, 78); c.closePath(); c.fill();
+        });
+        paintHairChunk(backHair, 5, (x, y) => (y>=10&&y<=18&&x>=CX-6&&x<=CX+13)||(y>=19&&y<=27&&x>=CX-28&&x<=CX-12)||(y>=41&&y<=49&&x<=CX-32)||(y>=65&&y<=73&&x<=CX-26), planes.hairWeightTop, (x, y) => smoothstep(86, 6, y) * .9);
+        for (let y = 62; y <= 92; y++) for (let x = CX - 44; x <= CX + 44; x++) if (backHair[y * W + x]) planes.hairWeightBot[y * W + x] = smoothstep(56, 88, y) * .7;
+      }
+    }
+
+    function compositeAllLayers() {
+      const useM = state.stockings, useB = state.panties, useS = state.bra, useT = state.suit !== 'none';
+      const isFront = state.view === 'front', isSide = state.view === 'side', S = SKEL;
+      const zipTipY = S.neckMidY + 5 + (state.zipper / 100) * (S.waistY - S.neckMidY - 5);
+
+      for (let i = 0; i < PIXEL_COUNT; i++) {
+        let c = garmentLayers.fixedBody[i], lid = c ? 1 : 0;
+        if (useM && garmentLayers.fixedMedias[i]) { c = garmentLayers.fixedMedias[i]; lid = 2; }
+        if (useB && garmentLayers.fixedBraga[i])  { c = garmentLayers.fixedBraga[i]; lid = 3; }
+        if (useS && garmentLayers.fixedSosten[i]) { c = garmentLayers.fixedSosten[i]; lid = 4; }
+        planes.fixedRGBA[i] = c; planes.fixedLayerID[i] = lid; planes.fixedSuitRGBA[i] = useT ? garmentLayers.fixedTraje[i] : 0;
+
+        planes.frontArmRGBA[i] = isSide ? garmentLayers.frontArmBody[i] : 0;
+        planes.frontArmSuitRGBA[i] = (isSide && useT) ? garmentLayers.frontArmTraje[i] : 0;
+
+        let sc = garmentLayers.softBody[i], slid = sc ? 1 : 0;
+        if (useM && garmentLayers.softMedias[i]) { sc = garmentLayers.softMedias[i]; slid = 2; }
+        if (useB && garmentLayers.softBraga[i])  { sc = garmentLayers.softBraga[i]; slid = 3; }
+        if (useS && garmentLayers.softSosten[i]) { sc = garmentLayers.softSosten[i]; slid = 4; }
+        planes.softRGBA[i] = sc; planes.softLayerID[i] = slid; planes.softSuitRGBA[i] = useT ? garmentLayers.softTraje[i] : 0;
+
+        let pc = garmentLayers.peekBody[i], plid = pc ? 1 : 0;
+        if (useS && garmentLayers.peekSosten[i]) { pc = garmentLayers.peekSosten[i]; plid = 4; }
+        planes.peekRGBA[i] = pc; planes.peekLayerID[i] = plid; planes.peekSuitRGBA[i] = useT ? garmentLayers.peekTraje[i] : 0;
+
+        planes.skirtRGBA[i] = useT ? garmentLayers.skirtCloth[i] : 0;
+        planes.headAccRGBA[i] = useT ? garmentLayers.headAcc[i] : 0;
+
+        let hz = 0; const x = i % W, y = (i / W) | 0;
+        if (pc || planes.peekSuitRGBA[i]) hz = x < CX ? 1 : 2;
+        if (c || planes.fixedSuitRGBA[i]) {
+          if ((isFront || isSide) && masks.head[i] && y <= S.chinY + 2) hz = 8;
+          else if (isFront && y >= S.hipTopY && y <= S.thighBandY + 14 && Math.abs(x - CX) >= 26) hz = x < CX ? 3 : 4;
+          else hz = 9;
+        }
+        if (sc || planes.softSuitRGBA[i]) hz = isFront ? (x < CX ? 1 : 2) : (isSide ? (x < SX ? 1 : 3) : (x < CX ? 3 : 4));
+        if (planes.skirtRGBA[i]) hz = 10;
+        if (isSide && (planes.frontArmRGBA[i] || planes.frontArmSuitRGBA[i])) hz = 9;
+        if (isFront && useT && Math.hypot(x - CX, y - zipTipY) <= 9) hz = 11;
+        if (planes.hairRGBA[i]) hz = planes.hairZone[i] || 5;
+        planes.hitZoneMask[i] = hz;
+      }
+    }
+
+    function buildSoftWeightMaps() {
+      planes.softWeightL.fill(0); planes.softWeightR.fill(0); planes.hipWeightL.fill(0); planes.hipWeightR.fill(0);
+      const S = SKEL;
+      if (state.view === 'front') {
+        const y0 = Math.floor(S.bustTopY - 8), y1 = Math.ceil(S.bustBotY + 12), x0 = Math.floor(CX - S.bustCenterX - S.bustRx - 10), x1 = Math.ceil(CX + S.bustCenterX + S.bustRx + 10);
+        for (let y = y0; y <= y1; y++) {
+          const row = y * W, anchorY = smoothstep(S.bustTopY - 2, S.bustTopY + 26, y);
+          for (let x = x0; x <= x1; x++) {
+            const idx = row + x, blendR = smoothstep(CX - 7, CX + 7, x), blendL = 1 - blendR;
+            planes.softWeightL[idx] = anchorY * blendL * (0.45 + 0.55 * smoothstep(40, 10, Math.hypot(x - (CX - S.bustCenterX), y - S.bustCenterY)));
+            planes.softWeightR[idx] = anchorY * blendR * (0.45 + 0.55 * smoothstep(40, 10, Math.hypot(x - (CX + S.bustCenterX), y - S.bustCenterY)));
+          }
+        }
+        for (let y = Math.floor(S.hipTopY); y <= Math.ceil(S.thighBandY + 16); y++) for (let x = CX - 64; x <= CX + 64; x++) {
+          const dL = Math.hypot((x - (CX - 43)) / 22, (y - S.hipPeakY) / 24), dR = Math.hypot((x - (CX + 43)) / 22, (y - S.hipPeakY) / 24);
+          planes.hipWeightL[y * W + x] = dL < 1 ? (1 - dL * dL) * .4 : 0;
+          planes.hipWeightR[y * W + x] = dR < 1 ? (1 - dR * dR) * .4 : 0;
+        }
+      } else if (state.view === 'side') {
+        for (let y = 86; y <= 184; y++) for (let x = SX - 94; x <= SX; x++) {
+          planes.softWeightL[y * W + x] = smoothstep(SX - 6, SX - 32, x) * (0.45 + 0.55 * smoothstep(44, 12, Math.hypot(x - S.sideBustX, y - S.sideBustY)));
+        }
+        for (let y = 156; y <= 244; y++) for (let x = SX - 4; x <= SX + 70; x++) {
+          planes.softWeightR[y * W + x] = smoothstep(SX + 4, SX + 26, x) * (0.45 + 0.55 * smoothstep(42, 12, Math.hypot(x - S.sideGluteX, y - S.sideGluteY)));
+        }
+      } else {
+        const y0 = Math.floor(S.gluteCenterY - S.gluteRy - 8), y1 = Math.ceil(S.gluteCenterY + S.gluteRy + 12), x0 = Math.floor(CX - S.gluteCenterX - S.gluteRx - 10), x1 = Math.ceil(CX + S.gluteCenterX + S.gluteRx + 10);
+        for (let y = y0; y <= y1; y++) {
+          const row = y * W, anchorY = smoothstep(S.gluteCenterY - S.gluteRy, S.gluteCenterY - S.gluteRy + 24, y);
+          for (let x = x0; x <= x1; x++) {
+            const idx = row + x, blendR = smoothstep(CX - 7, CX + 7, x), blendL = 1 - blendR;
+            planes.softWeightL[idx] = anchorY * blendL * (0.44 + 0.56 * smoothstep(42, 10, Math.hypot(x - (CX - S.gluteCenterX), y - S.gluteCenterY)));
+            planes.softWeightR[idx] = anchorY * blendR * (0.44 + 0.56 * smoothstep(42, 10, Math.hypot(x - (CX + S.gluteCenterX), y - S.gluteCenterY)));
+          }
+        }
+      }
+    }
+
+    function rebuildAllForView() { clearAllGarments(); buildAnatomicalMasks(state.view); buildBaseAndLingerieLayers(state.view); buildSuitLayer(state.view, state.suit, state.zipper); buildHairLayer(state.view); buildSoftWeightMaps(); compositeAllLayers(); }
+    function rebuildSuitOnly() { buildSuitLayer(state.view, state.suit, state.zipper); compositeAllLayers(); }
+
+    // ---- FÍSICAS BLANDAS 2D, CUBO, PARTÍCULAS Y TAMAGOTCHI ----
+    const mkSpring = (kx, ky, dx, dy, maxX, maxY) => ({ x:0, y:0, vx:0, vy:0, cx:0, cy:0, kx, ky, dx, dy, maxX, maxY, squash:0 });
+    const springs = {
+      bustL: mkSpring(195,138,10.5,7.6,5.8,7.4), bustR: mkSpring(195,138,10.5,7.6,5.8,7.4),
+      gluteL: mkSpring(210,152,11.2,8.2,5.4,6.8), gluteR: mkSpring(210,152,11.2,8.2,5.4,6.8),
+      hairTop: mkSpring(125,165,7.2,8.8,4.6,3.4), hairBangs: mkSpring(115,150,6.8,8.2,4.8,3.6),
+      hairCurl: mkSpring(140,160,7.5,8.5,4,3.2), hairBot: mkSpring(155,170,8.4,9,3,2.4),
+      clothSlipL: mkSpring(140,140,9.2,9.2,4.8,4.8), clothSlipR: mkSpring(140,140,9.2,9.2,4.8,4.8),
+      skirtL: mkSpring(78,92,4.8,5.6,14,16), skirtR: mkSpring(78,92,4.8,5.6,14,16), lapelSpread: mkSpring(125,125,8.5,8.5,7.5,4),
+    };
+
+    function applyImpulse(name, ivx, ivy) {
+      const s = springs[name]; if (!s) return;
+      s.vx += ivx; s.vy += ivy;
+      const mat = SUIT_MATERIALS[state.suit];
+      if (name === 'bustL') { springs.bustR.vx += ivx * .14; springs.bustR.vy += ivy * .18; if (state.suit !== 'none') { springs.clothSlipL.vx -= ivx * .18 * mat.clothLag; springs.clothSlipL.vy -= ivy * .18 * mat.clothLag; } }
+      else if (name === 'bustR') { springs.bustL.vx += ivx * .14; springs.bustL.vy += ivy * .18; if (state.suit !== 'none') { springs.clothSlipR.vx -= ivx * .18 * mat.clothLag; springs.clothSlipR.vy -= ivy * .18 * mat.clothLag; } }
+      else if (name === 'gluteL') { springs.gluteR.vx += ivx * .16; springs.gluteR.vy += ivy * .20; if (state.suit === 'maid' || state.suit === 'marfil') { springs.skirtL.vx += ivx * .35; springs.skirtL.vy += ivy * .22; } }
+      else if (name === 'gluteR') { springs.gluteL.vx += ivx * .16; springs.gluteL.vy += ivy * .20; if (state.suit === 'maid' || state.suit === 'marfil') { springs.skirtR.vx += ivx * .35; springs.skirtR.vy += ivy * .22; } }
+      else if (name === 'skirtL') { springs.skirtR.vx += ivx * .3; springs.skirtR.vy += ivy * .3; }
+      else if (name === 'skirtR') { springs.skirtL.vx += ivx * .3; springs.skirtL.vy += ivy * .3; }
+    }
+
+    const contacts = [];
+    function pushViscoContact(x, y, zone, depth, radius, shearX = 0, shearY = 0) {
+      for (const c of contacts) {
+        if (c.zone === zone && Math.hypot(c.x - x, c.y - y) < 9) {
+          c.x = lerp(c.x, x, .55); c.y = lerp(c.y, y, .55); c.targetDepth = Math.max(c.targetDepth, depth);
+          c.radius = Math.max(c.radius, radius); c.shearX = lerp(c.shearX, shearX, .5); c.shearY = lerp(c.shearY, shearY, .5); c.hold = .04; return;
+        }
+      }
+      if (contacts.length >= 8) contacts.shift();
+      contacts.push({ x, y, zone, depth: depth * .45, clothDepth: depth * .2, targetDepth: depth, radius, shearX, shearY, hold: .04 });
+    }
+
+    function stepPhysics(dt) {
+      const h = dt / 4;
+      for (let step = 0; step < 4; step++) for (const k in springs) {
+        const s = springs[k];
+        s.vx += (-s.kx * s.x - s.dx * s.vx) * h; s.vy += (-s.ky * s.y - s.dy * s.vy) * h;
+        s.x = Math.tanh((s.x + s.vx * h) / s.maxX) * s.maxX; s.y = Math.tanh((s.y + s.vy * h) / s.maxY) * s.maxY;
+        s.cx += (s.x - s.cx) * Math.min(1, 14 * h); s.cy += (s.y - s.cy) * Math.min(1, 14 * h);
+        s.squash += (clamp(s.vy * .002 - s.y * .011, -.095, .095) - s.squash) * Math.min(1, 16 * h);
+      }
+      const mat = SUIT_MATERIALS[state.suit];
+      for (let i = contacts.length - 1; i >= 0; i--) {
+        const c = contacts[i];
+        if (c.hold > 0) { c.hold -= dt; c.depth += (c.targetDepth - c.depth) * Math.min(1, 18 * dt); }
+        else { const dec = c.zone <= 4 ? mat.viscoDecay : 4.2; c.targetDepth = 0; c.depth *= Math.exp(-dec * dt); c.shearX *= Math.exp(-(dec + .8) * dt); c.shearY *= Math.exp(-(dec + .8) * dt); }
+        c.clothDepth += (c.depth - c.clothDepth) * Math.min(1, lerp(12, 5.8, mat.clothLag) * dt);
+        if (c.depth < .04 && c.clothDepth < .04 && c.hold <= 0) contacts.splice(i, 1);
+      }
+    }
+
+    const cube = { x:46, y:145, vx:0, vy:0, size:22, dragging:false, grabOffX:0, grabOffY:0, squash:0, hitCooldown:0 };
+    const particles = [];
+    function spawnBurst(x, y, type, count = 6) {
+      for (let i = 0; i < count; i++) {
+        const ang = -Math.PI * .5 + (Math.random() - .5) * 2.1, spd = 22 + Math.random() * 44;
+        particles.push({ x: x + (Math.random() - .5) * 10, y: y + (Math.random() - .5) * 10, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd - 12, life: .75 + Math.random() * .55, type });
+      }
+    }
+
+    function stepCube(dt) {
+      if (!state.cubeEnabled) return;
+      if (cube.hitCooldown > 0) cube.hitCooldown -= dt;
+      cube.squash *= Math.exp(-10 * dt);
+      if (!cube.dragging) {
+        cube.vy += 130 * dt; cube.vx *= Math.exp(-1.2 * dt); cube.vy *= Math.exp(-1.2 * dt); cube.x += cube.vx * dt; cube.y += cube.vy * dt;
+        const half = cube.size * .5;
+        if (cube.x < half + 4) { cube.x = half + 4; cube.vx = Math.abs(cube.vx) * .72; cube.squash = .25; }
+        if (cube.x > W - half - 4) { cube.x = W - half - 4; cube.vx = -Math.abs(cube.vx) * .72; cube.squash = .25; }
+        if (cube.y < half + 6) { cube.y = half + 6; cube.vy = Math.abs(cube.vy) * .72; cube.squash = .25; }
+        if (cube.y > 332 - half) { cube.y = 332 - half; cube.vy = -Math.abs(cube.vy) * .58; cube.vx *= .88; cube.squash = .2; }
+      }
+      const half = cube.size * .5, sMap = { 1:'bustL', 2:'bustR', 3:'gluteL', 4:'gluteR', 5:'hairTop', 6:'hairBangs', 7:'hairCurl' };
+      for (const [px, py] of [[cube.x,cube.y],[cube.x-half*.85,cube.y],[cube.x+half*.85,cube.y],[cube.x,cube.y-half*.85],[cube.x,cube.y+half*.85]]) {
+        const sx = px | 0, sy = py | 0; if (sx < 0 || sx >= W || sy < 0 || sy >= H) continue;
+        const z = planes.hitZoneMask[sy * W + sx]; if (z === 0) continue;
+        const speed = Math.hypot(cube.vx, cube.vy);
+        if (z === 10) {
+          applyImpulse(sx < CX ? 'skirtL' : 'skirtR', clamp(cube.vx * .72, -120, 120), clamp(cube.vy * .65 - 38, -135, 110));
+          if (!cube.dragging && cube.hitCooldown <= 0 && speed > 22) { cube.vx *= .82; cube.vy -= 18; cube.hitCooldown = .14; spawnBurst(sx, sy, 'star', 4); }
+        } else if (z >= 1 && z <= 7) {
+          pushViscoContact(sx, sy, z, clamp(2 + speed * .012, 2, 4.4), 15, clamp(cube.vx * .015, -2.6, 2.6), clamp(cube.vy * .015, -2.6, 2.6));
+          if (!cube.dragging && cube.hitCooldown <= 0 && speed > 18) {
+            applyImpulse(sMap[z], clamp(cube.vx * .65, -100, 100), clamp(cube.vy * .65 - 26, -110, 110));
+            cube.vx = -cube.vx * .58 + (cube.x < CX ? -40 : 40); cube.vy = -cube.vy * .52 - 36; cube.squash = .35; cube.hitCooldown = .14;
+            spawnBurst(sx, sy, 'star', 5); if (speed > 85) { setMood('Sorprendida', 1.6); addBlush(.14); }
+          } else if (cube.dragging && speed > 15) applyImpulse(sMap[z], clamp(cube.vx * .18, -32, 32), clamp(cube.vy * .18, -32, 32));
+        } else if (z === 8 && !cube.dragging && cube.hitCooldown <= 0 && speed > 30) {
+          cube.vx = -cube.vx * .5; cube.vy = -Math.abs(cube.vy) * .4 - 22; cube.hitCooldown = .2; setMood('Sorprendida', 1.4); addBlush(.12); spawnBurst(sx, sy, 'star', 4);
+        }
+        break;
+      }
+    }
+
+    function stepParticles(dt) {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i]; p.life -= dt; if (p.life <= 0) { particles.splice(i, 1); continue; }
+        p.x += p.vx * dt; p.y += p.vy * dt;
+        if (p.type === 'heart') { p.vy -= 14 * dt; p.vx *= .96; } else if (p.type === 'crumb') p.vy += 125 * dt; else { p.vx *= .94; p.vy *= .94; }
+      }
+      if (state.eatAnim) {
+        state.eatAnim.t += dt * 1.45;
+        if (state.eatAnim.t >= 1) {
+          state.eatAnim = null; addAffection(15); addBlush(.18); setMood('Feliz', 2.6);
+          applyImpulse('hairBangs', 18, -14); applyImpulse('hairTop', -14, -18);
+          spawnBurst(CX, SKEL.mouthY, 'crumb', 7); spawnBurst(CX, SKEL.headTopY + 12, 'heart', 6);
+        }
+      }
+    }
+
+    function setMood(m, dur = 2) { state.mood = m; state.moodTimer = Math.max(state.moodTimer, dur); updateHUDMeters(); }
+    function addAffection(a) { state.affection = clamp(state.affection + a, 0, 100); updateHUDMeters(); }
+    function addBlush(a) { state.blush = clamp(state.blush + a, .12, 1); updateHUDMeters(); }
+    function updateHUDMeters() {
+      const aff = Math.round(state.affection), bl = Math.round(state.blush * 100);
+      ui.affectionText.textContent = aff + '%'; ui.affectionBar.style.width = aff + '%';
+      ui.blushText.textContent = bl + '%'; ui.blushBar.style.width = bl + '%';
+      ui.moodChip.textContent = state.mood; ui.moodChip.className = 'mood-chip ' + state.mood.toLowerCase();
+    }
+    function stepTamagotchi(dt) {
+      state.time += dt; state.blinkTimer -= dt;
+      if (state.blinkTimer <= 0) { state.blinkPhase += dt * 11; if (state.blinkPhase >= Math.PI) { state.blinkPhase = 0; state.blinkTimer = 2.4 + Math.random() * 3.2; } }
+      state.blush += ((state.affection > 85 ? .24 : .14) - state.blush) * Math.min(1, .28 * dt);
+      if (state.affection > 35) state.affection -= .18 * dt;
+      if (state.moodTimer > 0) { state.moodTimer -= dt; if (state.moodTimer <= 0) { state.mood = state.blush > .58 ? 'Ruborizada' : 'Tranquila'; updateHUDMeters(); } }
+    }
+
+    // ---- INTERACCIÓN DE PUNTERO ----
+    const pointer = { x:CX, y:160, vx:0, vy:0, down:false, inside:false, grip:0, petAccum:0, activeZone:0, draggingZipper:false, draggingSkirt:false };
+    const ZONE_NAMES = { 0:'Fondo', 1:'Busto Izq.', 2:'Busto Der.', 3:'Glúteo / Cadera Izq.', 4:'Glúteo / Cadera Der.', 5:'Cabello Superior', 6:'Flequillo Cebra', 7:'Rizo Lateral', 8:'Rostro / Mejillas', 9:'Cuerpo Fijo', 10:'Tela Libre', 11:'Cremallera (Arrastra)' };
+    const getLogicalCoords = (e) => { const r = canvas.getBoundingClientRect(); return { x: clamp((e.clientX - r.left) * (W / r.width), 0, W - 1), y: clamp((e.clientY - r.top) * (H / r.height), 0, H - 1) }; };
+
+    function applyHandContact(x, y, z, isInitial) {
+      const sMap = { 1:'bustL', 2:'bustR', 3:'gluteL', 4:'gluteR', 5:'hairTop', 6:'hairBangs', 7:'hairCurl' };
+      const sName = sMap[z], spd = Math.hypot(pointer.vx, pointer.vy), mat = SUIT_MATERIALS[state.suit], onSuit = state.suit !== 'none' && z <= 4;
+      const pts = state.handEnabled ? [[x,y,3.4*mat.tension,14],[x-6,y-6,2.3*mat.tension,9],[x+1,y-8,2.5*mat.tension,9],[x+7,y-5,2.1*mat.tension,9]] : [[x,y,3.5*mat.tension,14]];
+      for (const [pxR, pyR, dep, rad] of pts) {
+        const px = pxR | 0, py = pyR | 0;
+        if (px >= 0 && px < W && py >= 0 && py < H && planes.hitZoneMask[py * W + px] === z) pushViscoContact(px, py, z, dep, rad, clamp(pointer.vx * .012, -2.4, 2.4), clamp(pointer.vy * .012, -2.4, 2.4));
+      }
+      if (onSuit) {
+        const slipSpring = (state.view === 'side' ? z <= 2 : x < CX) ? 'clothSlipL' : 'clothSlipR', pm = state.pullFabric ? 2.4 : 1;
+        if (isInitial) applyImpulse(slipSpring, (x < CX ? -10 : 10) * mat.slipGain * pm, 16 * mat.slipGain);
+        else {
+          applyImpulse(slipSpring, clamp(pointer.vx * .16 * mat.slipGain * pm, -46, 46), clamp(pointer.vy * .16 * mat.slipGain * pm, -46, 46));
+          if (state.view === 'front' && state.zipper > 8 && Math.abs(x - CX) < 34) {
+            const out = x < CX ? -pointer.vx : pointer.vx; if (out > 15) springs.lapelSpread.vx += clamp(out * .18 * pm, 0, 55);
+          }
+        }
+        if (spd > 210 && (state.suit === 'original' || state.suit === 'marfil') && Math.random() < .22) spawnBurst(x, y, 'star', 2);
+      }
+      if (isInitial) {
+        applyImpulse(sName, (x < CX ? -16 : 16) * mat.tension, 36 * mat.tension);
+        if (z <= 4) { addBlush(.08); setMood('Ruborizada', 1.6); } else { addAffection(1.8); setMood('Mimada', 1.6); spawnBurst(x, y - 8, 'heart', 2); }
+      } else {
+        const bf = (onSuit && state.pullFabric) ? .06 : .14 * mat.tension;
+        applyImpulse(sName, clamp(pointer.vx * bf, -28, 28), clamp(pointer.vy * bf, -28, 28));
+        pointer.petAccum += spd * .016;
+        if (pointer.petAccum > 20) {
+          pointer.petAccum = 0; addAffection(1.6); addBlush(.06);
+          if (spd > 280) { setMood('Sorprendida', 1.4); spawnBurst(x, y, 'star', 3); } else { setMood(z >= 5 ? 'Mimada' : 'Ruborizada', 1.8); spawnBurst(x, y - 10, 'heart', 2); }
+        }
+      }
+    }
+
+    canvas.addEventListener('pointerdown', (e) => {
+      const p = getLogicalCoords(e); pointer.x = p.x; pointer.y = p.y; pointer.down = true; pointer.inside = true;
+      pointer.draggingZipper = false; pointer.draggingSkirt = false; ui.stageHint.style.opacity = '0';
+      if (state.cubeEnabled && Math.abs(p.x - cube.x) <= cube.size * .65 && Math.abs(p.y - cube.y) <= cube.size * .65) {
+        cube.dragging = true; cube.grabOffX = cube.x - p.x; cube.grabOffY = cube.y - p.y; cube.vx = 0; cube.vy = 0; canvas.setPointerCapture(e.pointerId); return;
+      }
+      const z = planes.hitZoneMask[(p.y | 0) * W + (p.x | 0)]; pointer.activeZone = z;
+      if (z === 11 && state.view === 'front' && state.suit !== 'none') { pointer.draggingZipper = true; canvas.setPointerCapture(e.pointerId); return; }
+      if (z === 10) { pointer.draggingSkirt = true; applyImpulse(p.x < CX ? 'skirtL' : 'skirtR', p.x < CX ? -22 : 22, -42); addBlush(.09); setMood('Sorprendida', 1.3); canvas.setPointerCapture(e.pointerId); return; }
+      if (z >= 1 && z <= 7) applyHandContact(p.x, p.y, z, true);
+      else if (z === 8) { addBlush(.14); addAffection(2.5); setMood('Ruborizada', 1.8); spawnBurst(p.x, p.y - 6, 'heart', 3); }
+      canvas.setPointerCapture(e.pointerId);
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+      const p = getLogicalCoords(e); pointer.inside = true;
+      const dx = p.x - pointer.x, dy = p.y - pointer.y; pointer.x = p.x; pointer.y = p.y;
+      pointer.vx = lerp(pointer.vx, dx * 60, .55); pointer.vy = lerp(pointer.vy, dy * 60, .55);
+      const z = planes.hitZoneMask[(p.y | 0) * W + (p.x | 0)];
+      let zLabel = ZONE_NAMES[z] || '—';
+      if (state.view === 'side' && z === 1) zLabel = 'Busto (Lateral)';
+      if (state.view === 'side' && z === 3) zLabel = 'Glúteos (Lateral)';
+      if (z === 10) zLabel = state.suit === 'maid' ? 'Falda / Delantal' : 'Faja de Seda';
+      ui.zoneIndicator.textContent = 'Zona: ' + zLabel;
+
+      if (cube.dragging) { cube.x = clamp(p.x + cube.grabOffX, 12, W - 12); cube.y = clamp(p.y + cube.grabOffY, 12, H - 24); cube.vx = pointer.vx * .7; cube.vy = pointer.vy * .7; return; }
+      if (pointer.draggingZipper) {
+        const nz = Math.round(clamp((p.y - (SKEL.neckMidY + 5)) / Math.max(1, SKEL.waistY - SKEL.neckMidY - 3), 0, 1) * 100);
+        if (nz !== state.zipper) { state.zipper = nz; ui.zipperSlider.value = String(nz); ui.zipperVal.textContent = nz + '%'; rebuildSuitOnly(); if (nz > 45) { addBlush(.025); setMood('Ruborizada', 1.5); } }
+        return;
+      }
+      if (pointer.draggingSkirt) {
+        const m = state.pullFabric ? .42 : .28; applyImpulse(p.x < CX ? 'skirtL' : 'skirtR', clamp(pointer.vx * m, -75, 75), clamp(pointer.vy * m, -85, 65));
+        if (dy < -1.5) { addBlush(.025); setMood('Ruborizada', 1.5); } return;
+      }
+      if (pointer.down) {
+        const hitZ = z !== 0 ? z : pointer.activeZone;
+        if (hitZ >= 1 && hitZ <= 7 && z >= 1 && z <= 7) applyHandContact(p.x, p.y, z, false);
+        else if (z === 8) { pointer.petAccum += Math.hypot(dx, dy); if (pointer.petAccum > 14) { pointer.petAccum = 0; addAffection(2.2); addBlush(.09); setMood('Mimada', 2); spawnBurst(p.x, p.y - 8, 'heart', 2); } }
+      }
+    });
+
+    function handlePointerUp(e) {
+      if (cube.dragging) cube.dragging = false;
+      else if (pointer.draggingZipper) { pointer.draggingZipper = false; applyImpulse('bustL', -14, 18); applyImpulse('bustR', 14, 18); }
+      else if (pointer.draggingSkirt) { pointer.draggingSkirt = false; applyImpulse('skirtL', clamp(pointer.vx * .25, -55, 55), clamp(pointer.vy * .25, -55, 55)); applyImpulse('skirtR', clamp(pointer.vx * .25, -55, 55), clamp(pointer.vy * .25, -55, 55)); }
+      else if (pointer.down && pointer.activeZone >= 1 && pointer.activeZone <= 7) {
+        const sMap = { 1:'bustL', 2:'bustR', 3:'gluteL', 4:'gluteR', 5:'hairTop', 6:'hairBangs', 7:'hairCurl' };
+        applyImpulse(sMap[pointer.activeZone], clamp(pointer.vx * .25, -45, 45), clamp(pointer.vy * .25 - 34, -72, 72));
+      }
+      pointer.down = false; pointer.activeZone = 0;
+      try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+    }
+    canvas.addEventListener('pointerup', handlePointerUp);
+    canvas.addEventListener('pointercancel', handlePointerUp);
+    canvas.addEventListener('pointerleave', () => { pointer.inside = false; ui.zoneIndicator.textContent = 'Zona: —'; });
+
+    // ---- RENDERIZADO 60 FPS ----
+    const setPx = (x, y, col) => { const ix = x | 0, iy = y | 0; if (ix >= 0 && ix < W && iy >= 0 && iy < H && col !== 0) frameU32[iy * W + ix] = col; };
+
+    function evalViscoLocal(x, y, zMin, zMax) {
+      let dx = 0, dy = 0, shade = 0, wrinkle = 0; const mat = SUIT_MATERIALS[state.suit];
+      for (const c of contacts) {
+        if (c.zone < zMin || c.zone > zMax) continue;
+        const rx = x - c.x, ry = y - c.y, d2 = rx * rx + ry * ry, R = c.radius; if (d2 >= R * R) continue;
+        const dist = Math.sqrt(d2) + 1e-4, t = dist / R, nx = rx / dist, ny = ry / dist;
+        if (t < .62) { const core = 1 - t / .62, k = core * core * c.depth; dx += nx * k * 1.15 - c.shearX * core * .55; dy += ny * k * 1.15 - c.shearY * core * .55; shade -= core * c.depth * 4.6; wrinkle += Math.sin(t * 14) * core * c.clothDepth * (mat.wrinkleAmp * .25); }
+        else { const ring = Math.sin(((t - .62) / .38) * Math.PI), k = ring * c.depth * .55; dx -= nx * k; dy -= ny * k; shade += ring * c.depth * 2.4; wrinkle += ring * Math.cos(Math.atan2(ry, rx) * 4) * c.clothDepth * (mat.wrinkleAmp * .35); }
+      }
+      return { dx: clamp(dx, -4.5, 4.5), dy: clamp(dy, -4.5, 4.5), shade: clamp(shade, -24, 16), wrinkle: clamp(wrinkle, -18, 18) };
+    }
+
+    function drawFacialExpression() {
+      const S = SKEL;
+      if (state.view === 'side') {
+        for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) if (dx * dx + dy * dy <= 7) {
+          for (const [px, py] of [[SX - 29 + dx, 75 + dy], [SX - 13 + dx, 74 + dy]]) {
+            const ix = Math.round(px), iy = Math.round(py);
+            if (ix >= 0 && ix < W && iy >= 0 && iy < H && masks.head[iy * W + ix]) frameU32[iy * W + ix] = PAL.cheek;
+          }
+        }
+        return;
+      }
+      if (state.view !== 'front') return;
+      const blinkAmt = Math.sin(state.blinkPhase), isHappy = state.mood === 'Feliz' || state.mood === 'Mimada', isSurp = state.mood === 'Sorprendida';
+      const lookX = clamp((pointer.x - CX) / 110, -1, 1), lookY = clamp((pointer.y - S.eyeY) / 110, -1, 1);
+      const putFace = (x, y, col) => { const ix = Math.round(x), iy = Math.round(y); if (ix >= 0 && ix < W && iy >= 0 && iy < H && masks.head[iy * W + ix]) frameU32[iy * W + ix] = col; };
+
+      for (const s of [-1, 1]) {
+        const tx = Math.round(CX + s * S.eyeOffX);
+        for (let y = Math.round(S.eyeY + 3); y <= Math.round(S.mouthY + 1); y++) { putFace(tx, y, PAL.tear); putFace(tx + s, y, PAL.tearDark); }
+        const mx = Math.round(CX + s * 14.5), my = Math.round(S.cheekY);
+        for (let dy = -6; dy <= 6; dy++) for (let dx = -6; dx <= 6; dx++) {
+          const d = Math.hypot(dx, dy);
+          if (d <= 3.4) putFace(mx + dx, my + dy, d < 1.6 ? PAL.cheekSoft : PAL.cheek);
+          else if (state.blush > .2 && d <= 6 && bayer(mx + dx, my + dy) + .5 < (1 - (d - 3.4) / 2.6) * (state.blush - .14) * 1.15) putFace(mx + dx, my + dy, PAL.cheekSoft);
+        }
+        const ex = Math.round(CX + s * S.eyeOffX), ey = Math.round(S.eyeY);
+        for (let dy = -5; dy <= 5; dy++) for (let dx = -5; dx <= 5; dx++) {
+          if ((dx * dx) / 28 + (dy * dy) / 22 > 1) continue;
+          const lidLine = -.1 + blinkAmt * 5.2 + (isSurp ? -2.4 : 0) + (isHappy ? (1.8 - dx * dx * .18) : 0) + (dx * s) * .16;
+          putFace(ex + dx, ey + dy, dy < lidLine ? (dy < lidLine - 2.2 ? PAL.lidHi : (dy >= lidLine - 1 ? PAL.outline : PAL.lidBase)) : PAL.outline);
+        }
+        if (blinkAmt < .55 && !isHappy) putFace(ex + Math.round(lookX * 1.4), ey + 1 + Math.round(lookY * .8), PAL.whitePure);
+        for (const [lx, ly] of [[5,0],[6,-1],[7,-2],[8,-2],[6,0]]) putFace(ex + s * lx, ey + ly, PAL.outline);
+        for (let dx = -4; dx <= 4; dx++) putFace(ex + dx, ey - 8 + (isSurp ? -2 : 0) + Math.round(dx * dx * .15), PAL.outline);
+      }
+
+      const my = Math.round(S.mouthY);
+      for (let dx = -12; dx <= 12; dx++) putFace(CX + dx, my + 1 - Math.round(dx * dx * (isHappy ? .036 : .008)), (dx & 3) === 0 ? PAL.outline : PAL.outlineSoft);
+      const openM = (state.eatAnim && state.eatAnim.t > .65) ? Math.sin(((state.eatAnim.t - .65) / .35) * Math.PI) * 2.5 : (isSurp ? 1.8 : 0), lipRy = 3.2 + openM;
+      for (let dy = -Math.ceil(lipRy); dy <= Math.ceil(lipRy); dy++) for (let dx = -6; dx <= 6; dx++) {
+        const cupid = (dy < 0 && Math.abs(dx) <= 1) ? .45 : 0;
+        if ((dx * dx) / 30 + ((dy + cupid) * (dy + cupid)) / (lipRy * lipRy) > 1) continue;
+        if (openM > .6 && (dx * dx) / 10 + (dy * dy) / (lipRy * lipRy * .45) < 1) putFace(CX + dx, my + dy, PAL.lipDark);
+        else if (dy === 0 && Math.abs(dx) <= 4) putFace(CX + dx, my + dy, PAL.lipDark);
+        else putFace(CX + dx, my + dy, (dy === 1 && Math.abs(dx) <= 2) ? PAL.lipHi : PAL.lipBase);
+      }
+    }
+
+    function renderSoftPlane(x0, y0, x1, y1, sL, sR, cxL, cyL, cxR, cyR, zMin, zMax, isGlute) {
+      const mat = SUIT_MATERIALS[state.suit], hasSuit = state.suit !== 'none', cSlipL = springs.clothSlipL, cSlipR = springs.clothSlipR;
+      const spread = Math.max(0, springs.lapelSpread.x), clothLag = Math.hypot(sL.x-sL.cx,sL.y-sL.cy) + Math.hypot(sR.x-sR.cx,sR.y-sR.cy) + Math.hypot(cSlipL.x,cSlipL.y) + Math.hypot(cSlipR.x,cSlipR.y);
+      const minX = Math.max(0, x0 | 0), maxX = Math.min(W - 1, x1 | 0), minY = Math.max(0, y0 | 0), maxY = Math.min(H - 1, y1 | 0);
+      for (let y = minY; y <= maxY; y++) {
+        const row = y * W;
+        for (let x = minX; x <= maxX; x++) {
+          const idx = row + x, wL = planes.softWeightL[idx], wR = planes.softWeightR[idx];
+          if (wL === 0 && wR === 0) continue;
+          let ox = sL.x * wL + sR.x * wR, oy = sL.y * wL + sR.y * wR;
+          if (wL > .01 && Math.abs(sL.squash) > .002) { ox += (x - cxL) * sL.squash * wL * .44; oy -= (y - cyL) * sL.squash * wL * .52; }
+          if (wR > .01 && Math.abs(sR.squash) > .002) { ox += (x - cxR) * sR.squash * wR * .44; oy -= (y - cyR) * sR.squash * wR * .52; }
+          const visco = evalViscoLocal(x, y, zMin, zMax), sx = Math.round(x - ox + visco.dx), sy = Math.round(y - oy + visco.dy);
+          if (sx >= 0 && sx < W && sy >= 0 && sy < H) {
+            const sIdx = sy * W + sx; let uCol = planes.softRGBA[sIdx];
+            if (uCol !== 0) { const ud = visco.shade + (planes.softLayerID[sIdx] >= 2 ? visco.wrinkle * .6 : 0); frameU32[idx] = Math.abs(ud) > 2.4 ? shadePacked(uCol, Math.round(ud / 6) * 6) : uCol; }
+          }
+          if (!hasSuit) continue;
+          let tx = lerp(sL.x, sL.cx, mat.clothLag) * wL + lerp(sR.x, sR.cx, mat.clothLag) * wR + (cSlipL.x * wL + cSlipR.x * wR) * .72;
+          let ty = lerp(sL.y, sL.cy, mat.clothLag) * wL + lerp(sR.y, sR.cy, mat.clothLag) * wR + (cSlipL.y * wL + cSlipR.y * wR) * .72;
+          if (!isGlute && state.view === 'front' && state.zipper > 8 && spread > .15) tx += (x < CX ? -spread : spread) * smoothstep(38, 4, Math.abs(x - CX));
+          if (wL > .01 && Math.abs(sL.squash) > .002) { tx += (x - cxL) * sL.squash * wL * .44; ty -= (y - cyL) * sL.squash * wL * .52; }
+          if (wR > .01 && Math.abs(sR.squash) > .002) { tx += (x - cxR) * sR.squash * wR * .44; ty -= (y - cyR) * sR.squash * wR * .52; }
+          const csx = Math.round(x - tx + visco.dx * (.82 + mat.clothLag * .25)), csy = Math.round(y - ty + visco.dy * (.82 + mat.clothLag * .25));
+          if (csx < 0 || csx >= W || csy < 0 || csy >= H) continue;
+          let sCol = planes.softSuitRGBA[csy * W + csx]; if (sCol === 0) continue;
+          let fd = visco.shade * mat.tension;
+          if (state.suit === 'original') { fd += visco.wrinkle * .95; if (visco.shade < -3.5 && Math.sin((x - y) * .55) > .2) fd += mat.glintAmp * clamp(-visco.shade / 16, 0, 1); }
+          else if (state.suit === 'maid') fd += visco.wrinkle * 1.65 + (clothLag > .25 ? Math.sin(x * .42 + y * .28) * Math.min(clothLag, 2.5) * 6.5 : 0);
+          else if (state.suit === 'marfil') fd += visco.wrinkle * 1.15 + ((clothLag > .2 || Math.abs(visco.shade) > 2.5) ? Math.sin(x * .32 - y * .48 + state.time * 4.5) * (mat.glintAmp * .65) : 0);
+          frameU32[idx] = Math.abs(fd) > 2.4 ? shadePacked(sCol, Math.round(fd / 6) * 6) : sCol;
+        }
+      }
+    }
+
+    function renderDynamicSkirtLayer() {
+      if (state.suit !== 'maid' && state.suit !== 'marfil') return;
+      const S = SKEL, skL = springs.skirtL, skR = springs.skirtR, topY = state.view === 'side' ? 160 : Math.floor(S.waistY - 4), botY = state.suit === 'maid' ? Math.ceil(S.thighBandY + 34) : Math.ceil(S.kneeY + 8);
+      const sway = Math.sin(state.time * 2.6) * .45;
+      for (let y = topY; y <= botY; y++) {
+        const row = y * W, t = smoothstep(topY + 4, botY - 8, y), wx = Math.sin(t * 4.2 - state.time * 5.2) * (Math.abs(skL.vx) + Math.abs(skR.vx)) * .015 * t;
+        for (let x = CX - 76; x <= CX + 76; x++) {
+          const bR = smoothstep(CX - 20, CX + 20, x), bL = 1 - bR, ox = (skL.x * bL + skR.x * bR + sway) * t + wx, rl = (skL.y * bL + skR.y * bR) * t;
+          const sx = Math.round(x - ox), sy = Math.round(y - (rl < 0 ? rl * 1.25 : rl * .45));
+          if (sx < 0 || sx >= W || sy < 0 || sy >= H) continue;
+          let col = planes.skirtRGBA[sy * W + sx]; if (col === 0) continue;
+          const amp = (Math.hypot(skL.x, skL.y) * bL + Math.hypot(skR.x, skR.y) * bR) * t;
+          if (amp > .6) { const fold = Math.sin((x - CX) * .48 + ox * .4) * Math.min(amp, 6) * 2.6; if (Math.abs(fold) > 2.5) col = shadePacked(col, Math.round(fold / 6) * 6); }
+          frameU32[row + x] = col;
+        }
+      }
+    }
+
+    function renderHairAndAccessories() {
+      const sTop = springs.hairTop, sBng = springs.hairBangs, sCrl = springs.hairCurl, sBot = springs.hairBot, yMax = Math.ceil(SKEL.chinY + 16);
+      for (let y = 1; y <= yMax; y++) {
+        const row = y * W;
+        for (let x = CX - 66; x <= CX + 66; x++) {
+          const idx = row + x, wT = planes.hairWeightTop[idx], wB = planes.hairWeightBangs[idx], wC = planes.hairWeightCurl[idx], wBt = planes.hairWeightBot[idx];
+          let ox = sTop.x*wT + sBng.x*wB + sCrl.x*wC + sBot.x*wBt, oy = sTop.y*wT + sBng.y*wB + sCrl.y*wC + sBot.y*wBt;
+          if (wT === 0 && wB === 0 && wC === 0 && wBt === 0) {
+            if (y < SKEL.headTopY) { ox = sTop.x * .8; oy = sTop.y * .8; }
+            else if ((state.view === 'side' && x < SX) || (state.view === 'front' && x > CX - 6)) { ox = sBng.x * .85; oy = sBng.y * .85; }
+            else { ox = sCrl.x * .75; oy = sCrl.y * .75; }
+          }
+          const v = evalViscoLocal(x, y, 5, 7), sx = Math.round(x - ox + v.dx * .7), sy = Math.round(y - oy + v.dy * .7);
+          if (sx >= 0 && sx < W && sy >= 0 && sy < H && planes.hairRGBA[sy * W + sx] !== 0) frameU32[idx] = planes.hairRGBA[sy * W + sx];
+        }
+      }
+      if (state.suit === 'maid' || state.suit === 'marfil') {
+        for (let y = 10; y <= Math.ceil(SKEL.headCenterY + 6); y++) for (let x = CX - 52; x <= CX + 52; x++) {
+          const sx = Math.round(x - sTop.x * .48), sy = Math.round(y - sTop.y * .48);
+          if (sx >= 0 && sx < W && sy >= 0 && sy < H && planes.headAccRGBA[sy * W + sx] !== 0) frameU32[y * W + x] = planes.headAccRGBA[sy * W + sx];
+        }
+      }
+    }
+
+    function drawCubeParticlesAndHand() {
+      if (state.cubeEnabled) {
+        const hX = Math.round(cube.size * .5 * (1 + cube.squash * .45)), hY = Math.round(cube.size * .5 * (1 - cube.squash * .35)), cx = Math.round(cube.x), cy = Math.round(cube.y);
+        for (let dx = -hX + 2; dx <= hX - 2; dx++) setPx(cx + dx, cy + hY + 2, packRGBA(14, 12, 24));
+        const cTop = packRGBA(186,152,255), cBody = packRGBA(122,82,206), cDark = packRGBA(72,46,134), cCore = packRGBA(93,224,178);
+        for (let dy = -hY; dy <= hY; dy++) for (let dx = -hX; dx <= hX; dx++) {
+          if (Math.abs(dx) === hX && Math.abs(dy) === hY) continue;
+          let col = cBody;
+          if (Math.abs(dx) === hX || Math.abs(dy) === hY) col = PAL.outline;
+          else if (dy <= -hY + 2 || dx <= -hX + 2) col = cTop;
+          else if (dy >= hY - 2 || dx >= hX - 2) col = cDark;
+          else if (Math.abs(dx) + Math.abs(dy) <= 4) col = (Math.abs(dx) + Math.abs(dy) <= 1) ? PAL.whitePure : cCore;
+          else if (((dx + dy) & 1) === 0 && dy > 0) col = cDark;
+          setPx(cx + dx, cy + dy, col);
+        }
+      }
+
+      const HEART = ['0110110','1111111','1111111','0111110','0011100','0001000'], STAR = ['00100','01110','11111','01110','00100'];
+      for (const p of particles) {
+        const px = Math.round(p.x), py = Math.round(p.y);
+        if (p.type === 'heart') { const col = p.life > .35 ? PAL.cheek : PAL.cheekSoft; for (let r = 0; r < 6; r++) for (let c = 0; c < 7; c++) if (HEART[r][c] === '1') setPx(px + c - 3, py + r - 3, (r === 1 && c === 1) ? PAL.whitePure : col); }
+        else if (p.type === 'star') { for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++) if (STAR[r][c] === '1') setPx(px + c - 2, py + r - 2, (r === 2 && c === 2) ? PAL.whitePure : PAL.goldHi); }
+        else { setPx(px, py, PAL.cheekSoft); setPx(px + 1, py, PAL.goldHi); }
+      }
+      if (state.eatAnim) {
+        const t = state.eatAnim.t, x = Math.round(lerp(42, CX, smoothstep(0, 1, t))), y = Math.round(lerp(145, SKEL.mouthY, smoothstep(0, 1, t)) - Math.sin(t * Math.PI) * 38);
+        const cWrap = packRGBA(146,92,224), cFrost = packRGBA(255,198,220);
+        for (let dy = 1; dy <= 5; dy++) { const w = 5 - Math.floor(dy * .35); for (let dx = -w; dx <= w; dx++) setPx(x + dx, y + dy, (Math.abs(dx) === w || dy === 5) ? PAL.outline : ((dx & 1) ? cWrap : PAL.lidShadow)); }
+        for (let dy = -3; dy <= 1; dy++) { const w = 5 - Math.max(0, -dy - 1); for (let dx = -w; dx <= w; dx++) setPx(x + dx, y + dy, (Math.abs(dx) === w || dy === -3) ? PAL.outline : cFrost); }
+        setPx(x, y - 4, PAL.cheek); setPx(x + 1, y - 4, PAL.cheek); setPx(x, y - 5, PAL.whitePure);
+      }
+
+      if (state.handEnabled && pointer.inside && !cube.dragging) {
+        pointer.grip += ((pointer.down ? 1 : 0) - pointer.grip) * .32;
+        const g = pointer.grip, hx = Math.round(pointer.x), hy = Math.round(pointer.y), curl = Math.round(g * 5);
+        const cSkin = packRGBA(246,224,212), cShade = packRGBA(210,178,166), cHi = packRGBA(255,245,240);
+        const fillR = (x0, y0, rw, rh, col) => { for (let dy = 0; dy < rh; dy++) for (let dx = 0; dx < rw; dx++) setPx(x0 + dx, y0 + dy, col); };
+        fillR(hx - 8, hy + 1 + curl, 16, 12, PAL.outline); fillR(hx - 7, hy + 2 + curl, 14, 10, cSkin); fillR(hx - 6, hy + 8 + curl, 12, 3, cShade);
+        fillR(hx - 5, hy + 13 + curl, 10, 5, PAL.outline); fillR(hx - 4, hy + 13 + curl, 8, 4, cShade);
+        for (const [ox, len] of [[-7,10-curl],[-3,12-curl],[1,11-curl],[5,9-curl]]) {
+          const fy = hy + 2 + curl - len; fillR(hx + ox - 1, fy - 1, 5, len + 2, PAL.outline); fillR(hx + ox, fy, 3, len, cSkin); fillR(hx + ox, fy, 3, 2, cHi);
+          if (g > .35) fillR(hx + ox, fy + 2, 3, 1, cShade);
+        }
+        const tx = hx - 11 + Math.round(g * 2), ty = hy + 4 + curl; fillR(tx - 1, ty - 1, 5, 6, PAL.outline); fillR(tx, ty, 3, 4, cSkin);
+        if (state.pullFabric) for (const [dx, dy] of [[0,-12],[-1,-11],[1,-11],[0,-10]]) setPx(hx + dx, hy + dy + curl, PAL.goldHi);
+      }
+    }
+
+    function renderFrame() {
+      const S = SKEL, hasSuit = state.suit !== 'none', mat = SUIT_MATERIALS[state.suit];
+      frameU32.set(bgBuf);
+
+      if (state.view === 'back') {
+        for (let y = Math.floor(S.bustTopY - 4); y <= Math.ceil(S.bustBotY + 8); y++) for (let x = CX - 60; x <= CX + 60; x++) {
+          const s = x < CX ? springs.bustL : springs.bustR, sx = Math.round(x - s.x * .75), sy = Math.round(y - s.y * .75);
+          if (sx >= 0 && sx < W && sy >= 0 && sy < H && planes.peekRGBA[sy * W + sx]) frameU32[y * W + x] = planes.peekRGBA[sy * W + sx];
+          if (hasSuit) {
+            const tsx = Math.round(x - lerp(s.x, s.cx, mat.clothLag) * .75), tsy = Math.round(y - lerp(s.y, s.cy, mat.clothLag) * .75);
+            if (tsx >= 0 && tsx < W && tsy >= 0 && tsy < H && planes.peekSuitRGBA[tsy * W + tsx]) frameU32[y * W + x] = planes.peekSuitRGBA[tsy * W + tsx];
+          }
+        }
+      }
+
+      const sGL = springs.gluteL, sGR = springs.gluteR;
+      const hasHip = state.view === 'front' && (Math.abs(sGL.x)>.05 || Math.abs(sGL.y)>.05 || Math.abs(sGR.x)>.05 || Math.abs(sGR.y)>.05 || contacts.length > 0);
+      const hipY0 = Math.floor(S.hipTopY), hipY1 = Math.ceil(S.thighBandY + 16);
+      for (let y = 30; y < H; y++) {
+        const row = y * W, inHip = hasHip && y >= hipY0 && y <= hipY1;
+        for (let x = 18; x < W - 18; x++) {
+          const idx = row + x;
+          if (inHip) {
+            const wL = planes.hipWeightL[idx], wR = planes.hipWeightR[idx];
+            if (wL > 0 || wR > 0) {
+              const v = evalViscoLocal(x, y, 3, 4), sx = Math.round(x - (sGL.x * wL + sGR.x * wR) + v.dx * .6), sy = Math.round(y - (sGL.y * wL + sGR.y * wR) + v.dy * .6);
+              if (sx >= 0 && sx < W && sy >= 0 && sy < H && planes.fixedRGBA[sy * W + sx]) frameU32[idx] = planes.fixedRGBA[sy * W + sx];
+              if (hasSuit) {
+                const csx = Math.round(x - (lerp(sGL.x, sGL.cx, mat.clothLag) * wL + lerp(sGR.x, sGR.cx, mat.clothLag) * wR + (springs.clothSlipL.x * wL + springs.clothSlipR.x * wR) * .65) + v.dx * .55);
+                const csy = Math.round(y - (lerp(sGL.y, sGL.cy, mat.clothLag) * wL + lerp(sGR.y, sGR.cy, mat.clothLag) * wR + (springs.clothSlipL.y * wL + springs.clothSlipR.y * wR) * .65) + v.dy * .55);
+                if (csx >= 0 && csx < W && csy >= 0 && csy < H) { let scol = planes.fixedSuitRGBA[csy * W + csx]; if (scol) { const d = v.shade * mat.tension + v.wrinkle; frameU32[idx] = Math.abs(d) > 2.6 ? shadePacked(scol, Math.round(d / 6) * 6) : scol; } }
+              }
+              continue;
+            }
+          }
+          if (planes.fixedRGBA[idx]) frameU32[idx] = planes.fixedRGBA[idx];
+          if (hasSuit && planes.fixedSuitRGBA[idx]) frameU32[idx] = planes.fixedSuitRGBA[idx];
+        }
+      }
+
+      drawFacialExpression();
+
+      if (state.view === 'front') {
+        renderSoftPlane(CX-S.bustCenterX-S.bustRx-10, S.bustTopY-8, CX+S.bustCenterX+S.bustRx+10, S.bustBotY+12, springs.bustL, springs.bustR, CX-S.bustCenterX, S.bustCenterY, CX+S.bustCenterX, S.bustCenterY, 1, 2, false);
+      } else if (state.view === 'side') {
+        renderSoftPlane(SX-94, 86, SX, 184, springs.bustL, springs.gluteL, S.sideBustX, S.sideBustY, S.sideGluteX, S.sideGluteY, 1, 2, false);
+        renderSoftPlane(SX-4, 156, SX+70, 244, springs.bustL, springs.gluteL, S.sideBustX, S.sideBustY, S.sideGluteX, S.sideGluteY, 3, 4, true);
+      } else {
+        renderSoftPlane(CX-S.gluteCenterX-S.gluteRx-10, S.gluteCenterY-S.gluteRy-8, CX+S.gluteCenterX+S.gluteRx+10, S.gluteCenterY+S.gluteRy+12, springs.gluteL, springs.gluteR, CX-S.gluteCenterX, S.gluteCenterY, CX+S.gluteCenterX, S.gluteCenterY, 3, 4, true);
+      }
+
+      renderDynamicSkirtLayer();
+
+      if (state.view === 'side') {
+        for (let y = 82; y <= 246; y++) for (let x = SX - 50; x <= SX + 28; x++) {
+          const idx = y * W + x;
+          if (planes.frontArmRGBA[idx]) frameU32[idx] = planes.frontArmRGBA[idx];
+          if (hasSuit && planes.frontArmSuitRGBA[idx]) frameU32[idx] = planes.frontArmSuitRGBA[idx];
+        }
+      }
+
+      renderHairAndAccessories();
+      drawCubeParticlesAndHand();
+      ctx.putImageData(frameImageData, 0, 0);
+    }
+
+    // ---- CONTROLES HUD Y BUCLE PRINCIPAL ----
+    const VIEW_TITLES = { front:'VISTA FRONTAL', side:'VISTA LATERAL', back:'VISTA TRASERA' };
+    function setView(newView) {
+      if (state.view === newView) return;
+      state.view = newView;
+      ui.viewBadgeText.textContent = VIEW_TITLES[newView];
+      ui.viewButtons.forEach((b) => b.classList.toggle('active', b.dataset.view === newView));
+      contacts.length = 0; rebuildAllForView(); syncZipperUI();
+      applyImpulse('hairTop', newView === 'side' ? -30 : 26, -12);
+      applyImpulse('hairBangs', newView === 'side' ? 32 : -26, -10);
+    }
+
+    function syncZipperUI() {
+      const disabled = state.suit === 'none' || state.view !== 'front';
+      ui.zipperBlock.classList.toggle('disabled', disabled);
+      ui.zipperVal.textContent = state.zipper + '%';
+      ui.zipperHint.textContent = state.suit === 'none'
+        ? 'Activa un traje superior para usar la cremallera.'
+        : (state.view !== 'front' ? 'Cambia a Vista Frontal para abrir la cremallera.' : 'Arrastra el slider o el tirador metálico en el pecho.');
+    }
+
+    ui.viewButtons.forEach((btn) => btn.addEventListener('click', () => setView(btn.dataset.view)));
+    ui.btnBounceBust.addEventListener('click', () => { applyImpulse('bustL', state.view === 'side' ? -42 : -24, -114); applyImpulse('bustR', 24, -108); applyImpulse('hairBangs', 14, -16); addBlush(.08); });
+    ui.btnBounceGlutes.addEventListener('click', () => { applyImpulse('gluteL', state.view === 'side' ? 42 : -26, -110); applyImpulse('gluteR', 26, -104); addBlush(.08); });
+    ui.btnWave.addEventListener('click', () => {
+      applyImpulse('hairTop', -44, -34); applyImpulse('hairBangs', 50, -28); applyImpulse('hairCurl', -36, -24);
+      setTimeout(() => { applyImpulse('bustL', -36, -102); setTimeout(() => applyImpulse('bustR', 36, -102), 75); }, 70);
+      setTimeout(() => { applyImpulse('gluteL', state.view === 'side' ? 38 : -32, -98); setTimeout(() => applyImpulse('gluteR', 32, -98), 75); }, 160);
+    });
+    ui.btnCubeHit.addEventListener('click', () => {
+      if (!state.cubeEnabled) { state.cubeEnabled = true; ui.btnToggleCube.classList.add('active'); ui.cubeStateLbl.textContent = 'ON'; }
+      const fromLeft = Math.random() < .5; cube.dragging = false; cube.hitCooldown = 0;
+      cube.x = fromLeft ? 28 : W - 28;
+      cube.y = state.view === 'side' ? (fromLeft ? SKEL.sideBustY : SKEL.sideGluteY) : (state.view === 'front' ? SKEL.bustCenterY : SKEL.gluteCenterY);
+      cube.vx = fromLeft ? 280 : -280; cube.vy = -48;
+    });
+    ui.btnHappy.addEventListener('click', () => { addAffection(12); addBlush(.14); setMood('Feliz', 2.8); applyImpulse('hairTop', 24, -26); applyImpulse('hairBangs', -26, -20); applyImpulse('hairCurl', 20, -18); spawnBurst(CX, SKEL.headTopY + 12, 'heart', 8); });
+    ui.btnFeed.addEventListener('click', () => { if (state.view !== 'front') setView('front'); if (!state.eatAnim) state.eatAnim = { t: 0 }; });
+    ui.btnToggleHand.addEventListener('click', () => { state.handEnabled = !state.handEnabled; ui.btnToggleHand.classList.toggle('active', state.handEnabled); ui.handStateLbl.textContent = state.handEnabled ? 'ON' : 'OFF'; canvas.classList.toggle('hand-active', state.handEnabled); });
+    ui.btnToggleCube.addEventListener('click', () => { state.cubeEnabled = !state.cubeEnabled; ui.btnToggleCube.classList.toggle('active', state.cubeEnabled); ui.cubeStateLbl.textContent = state.cubeEnabled ? 'ON' : 'OFF'; if (state.cubeEnabled) { cube.x = 46; cube.y = 145; cube.vx = 0; cube.vy = 0; } });
+
+    ui.suitButtons.forEach((btn) => btn.addEventListener('click', () => {
+      state.suit = btn.dataset.suit;
+      ui.suitButtons.forEach((b) => b.classList.toggle('active', b === btn));
+      ui.suitActiveTag.textContent = SUIT_MATERIALS[state.suit].tag;
+      rebuildSuitOnly(); syncZipperUI();
+      applyImpulse('skirtL', -24, -18); applyImpulse('skirtR', 24, -18); applyImpulse('clothSlipL', -12, 10); applyImpulse('clothSlipR', 12, 10);
+    }));
+    ui.btnPullFabric.addEventListener('click', () => { state.pullFabric = !state.pullFabric; ui.btnPullFabric.classList.toggle('active', state.pullFabric); ui.pullFabricLbl.textContent = state.pullFabric ? 'ON' : 'OFF'; });
+    ui.btnBreeze.addEventListener('click', () => {
+      applyImpulse('hairTop', 52, -22); applyImpulse('hairBangs', 64, -18); applyImpulse('hairCurl', 48, -14);
+      applyImpulse('skirtL', 78, -68); applyImpulse('skirtR', 84, -62); applyImpulse('clothSlipL', 28, -14); applyImpulse('clothSlipR', 28, -14);
+      if (state.zipper > 10) applyImpulse('lapelSpread', 46, 0);
+      spawnBurst(CX + 26, SKEL.hipPeakY, 'star', 5); addBlush(.08);
+    });
+    ui.zipperSlider.addEventListener('input', (e) => { state.zipper = parseInt(e.target.value, 10) || 0; ui.zipperVal.textContent = state.zipper + '%'; rebuildSuitOnly(); });
+    ui.btnToggleBra.addEventListener('click', () => { state.bra = !state.bra; ui.btnToggleBra.classList.toggle('active', state.bra); ui.braLbl.textContent = state.bra ? 'ON' : 'OFF'; compositeAllLayers(); });
+    ui.btnTogglePanties.addEventListener('click', () => { state.panties = !state.panties; ui.btnTogglePanties.classList.toggle('active', state.panties); ui.pantiesLbl.textContent = state.panties ? 'ON' : 'OFF'; compositeAllLayers(); });
+    ui.btnToggleStockings.addEventListener('click', () => { state.stockings = !state.stockings; ui.btnToggleStockings.classList.toggle('active', state.stockings); ui.stockingsLbl.textContent = state.stockings ? 'ON' : 'OFF'; compositeAllLayers(); });
+
+    let lastTs = 0, fpsFrames = 0, fpsAccum = 0;
+    function mainLoop(ts) {
+      try {
+        if (!lastTs) lastTs = ts;
+        const rawDt = (ts - lastTs) / 1000; lastTs = ts;
+        const dt = clamp(rawDt, 0.001, 0.033);
+        stepPhysics(dt); stepCube(dt); stepParticles(dt); stepTamagotchi(dt); renderFrame();
+        fpsFrames++; fpsAccum += rawDt;
+        if (fpsAccum >= 0.5) { ui.fpsCounter.textContent = `${Math.round(fpsFrames / fpsAccum)} FPS`; fpsFrames = 0; fpsAccum = 0; }
+      } catch (err) { console.error('Error en renderizado:', err); }
+      requestAnimationFrame(mainLoop);
+    }
+
+    function init() {
+      buildBackground();
+      rebuildAllForView();
+      syncZipperUI();
+      updateHUDMeters();
+      requestAnimationFrame(mainLoop);
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+    else init();
+  })();
+  </script>
+</body>
+</html>

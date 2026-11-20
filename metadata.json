@@ -1,0 +1,6 @@
+{
+  "name": "Marioneta Pixel",
+  "description": "Visor interactivo Pixel Art 280×360 con físicas blandas 2D, vestuario por capas y personalidad viva con Gemini AI.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
