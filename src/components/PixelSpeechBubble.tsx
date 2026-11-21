@@ -14,6 +14,8 @@ const MOOD_ACCENT: Record<AvatarMood, string> = {
   Sorprendida: 'text-[#e8c674]',
   Ruborizada: 'text-[#ff85a1]',
   Mimada: 'text-[#ff85a1]',
+  Traviesa: 'text-[#e8c674]',
+  Juguetona: 'text-[#5de0b2]',
 };
 
 export function PixelSpeechBubble({

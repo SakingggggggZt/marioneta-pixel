@@ -2,17 +2,18 @@ import 'dotenv/config';
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { GoogleGenAI, Type } from '@google/genai';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const PORT = Number(process.env.PORT) || 3000;
 
-// Configuración de Pawan.krd (CosmosRP 4.0 Flash)
+// Proveedor Primario: Pawan.krd (CosmosRP 4.0 Flash)
 const PAWAN_API_KEY =
   process.env.PAWAN_API_KEY?.trim() ||
   process.env.OPENAI_API_KEY?.trim() ||
-  'pk-your_key';
+  '';
 
 const PAWAN_MODEL = process.env.PAWAN_MODEL?.trim() || 'pkrd/cosmosrp-4.0-flash';
 
@@ -22,7 +23,33 @@ const PAWAN_ENDPOINTS = [
   'https://api.pawan.krd/v1/chat/completions',
 ];
 
-const VALID_MOODS = ['Tranquila', 'Feliz', 'Sorprendida', 'Ruborizada', 'Mimada'] as const;
+// Proveedor de Respaldo: Google Gemini Flash Lite vía @google/genai
+const GEMINI_FALLBACK_MODEL =
+  process.env.GEMINI_FALLBACK_MODEL?.trim() || 'gemini-3.1-flash-lite';
+
+let geminiClient: GoogleGenAI | null = null;
+function getGeminiClient(): GoogleGenAI | null {
+  const key = process.env.GEMINI_API_KEY?.trim();
+  if (!key) return null;
+  if (!geminiClient) {
+    geminiClient = new GoogleGenAI({
+      apiKey: key,
+      httpOptions: { headers: { 'User-Agent': 'aistudio-build' } },
+    });
+  }
+  return geminiClient;
+}
+
+const VALID_MOODS = [
+  'Tranquila',
+  'Feliz',
+  'Sorprendida',
+  'Ruborizada',
+  'Mimada',
+  'Traviesa',
+  'Juguetona',
+] as const;
+
 const VALID_ACTIONS = [
   'none',
   'happy',
@@ -63,6 +90,20 @@ const VALID_ACTIONS = [
   'crossArms',
   'coverFace',
   'liftLeg',
+  'heartHands',
+  'salute',
+  'catPaws',
+  'tickle',
+  'shyFingers',
+  'giveRose',
+  'photoPose',
+  'undressSuit',
+  'dressSuit',
+  'slipStrap',
+  'toggleGloves',
+  'toggleStockings',
+  'toggleGarters',
+  'toggleChoker',
 ] as const;
 
 const VALID_ANIMATIONS = [
@@ -104,21 +145,40 @@ const VALID_ANIMATIONS = [
   'cross_arms',
   'cover_face',
   'lift_leg',
+  'heart_hands',
+  'salute',
+  'cat_paws',
+  'tickled',
+  'shy_fingers',
+  'music_sway',
+  'rose_blush',
 ] as const;
+
+const VALID_HAND_GESTURES = [
+  'open',
+  'thumbs_up',
+  'peace',
+  'point',
+  'fist',
+  'kiss_hand',
+  'wave_spread',
+  'rock',
+  'heart_pinch',
+] as const;
+
+const VALID_MOUTH_SHAPES = ['neutral', 'smile', 'open', 'kiss', 'pout', 'talk'] as const;
+const VALID_SUITS = ['original', 'maid', 'marfil', 'none'] as const;
+const VALID_VIEWS = ['front', 'side', 'back'] as const;
+const VALID_EFFECTS = ['none', 'hearts', 'stars', 'notes', 'petals'] as const;
 
 type ValidMood = (typeof VALID_MOODS)[number];
 type ValidAction = (typeof VALID_ACTIONS)[number];
 type ValidAnimation = (typeof VALID_ANIMATIONS)[number];
-type HandGesture =
-  | 'open'
-  | 'thumbs_up'
-  | 'peace'
-  | 'point'
-  | 'fist'
-  | 'kiss_hand'
-  | 'wave_spread'
-  | 'rock';
-type MouthShape = 'neutral' | 'smile' | 'open' | 'kiss' | 'pout' | 'talk';
+type HandGesture = (typeof VALID_HAND_GESTURES)[number];
+type MouthShape = (typeof VALID_MOUTH_SHAPES)[number];
+type ValidSuit = (typeof VALID_SUITS)[number];
+type ValidView = (typeof VALID_VIEWS)[number];
+type ValidEffect = (typeof VALID_EFFECTS)[number];
 
 interface ServerRigPose {
   torsoTilt?: number;
@@ -151,9 +211,41 @@ interface ServerRigPose {
   durationSec?: number;
 }
 
+interface ServerChoreographyBeat {
+  delayMs: number;
+  action?: ValidAction;
+  view?: ValidView;
+  rigPose?: ServerRigPose;
+}
+
+interface PersonaPayload {
+  archetype?: string;
+  archetypeLabel?: string;
+  archetypeTone?: string;
+  flirtiness?: number;
+  expressiveness?: number;
+  sensitivity?: number;
+  customTraitNote?: string;
+}
+
+interface UserProfilePayload {
+  name?: string;
+  addressStyle?: 'tu' | 'carino' | 'amo' | 'nombre';
+  roleTitle?: string;
+  aboutMe?: string;
+}
+
+interface RelationshipPayload {
+  trust?: number;
+  energy?: number;
+  interactionsCount?: number;
+  giftsGiven?: number;
+  rankTitle?: string;
+}
+
 interface AvatarContextPayload {
-  view: 'front' | 'side' | 'back';
-  suit: 'original' | 'maid' | 'marfil' | 'none';
+  view: ValidView;
+  suit: ValidSuit;
   zipper: number;
   mood: string;
   affection: number;
@@ -161,8 +253,14 @@ interface AvatarContextPayload {
   bra: boolean;
   panties: boolean;
   stockings: boolean;
+  garters?: boolean;
+  gloves?: boolean;
+  choker?: boolean;
+  strapSlip?: 'none' | 'left' | 'both';
   currentAnimation?: string;
   lastInteraction?: string;
+  musicBoxEnabled?: boolean;
+  stageTheme?: string;
 }
 
 interface MarionetaRequestBody {
@@ -173,7 +271,20 @@ interface MarionetaRequestBody {
     detail?: string;
   };
   avatarState: AvatarContextPayload;
+  personaConfig?: PersonaPayload;
+  userProfile?: UserProfilePayload;
+  relationshipStats?: RelationshipPayload;
   history?: Array<{ role: 'user' | 'model'; text: string }>;
+}
+
+interface ServerLingerieChange {
+  bra?: boolean;
+  panties?: boolean;
+  stockings?: boolean;
+  garters?: boolean;
+  gloves?: boolean;
+  choker?: boolean;
+  strapSlip?: 'none' | 'left' | 'both';
 }
 
 interface ParsedModelPayload {
@@ -184,6 +295,16 @@ interface ParsedModelPayload {
   animation?: string;
   affectionDelta?: number;
   blushDelta?: number;
+  trustDelta?: number;
+  changeSuit?: string;
+  animateUndress?: boolean;
+  animateDressSuit?: string;
+  changeView?: string;
+  changeZipper?: number;
+  changeLingerie?: ServerLingerieChange;
+  rigPose?: ServerRigPose;
+  choreography?: ServerChoreographyBeat[];
+  spawnEffect?: string;
 }
 
 function hasValidPawanKey(): boolean {
@@ -230,61 +351,172 @@ function isTransientNetworkError(error: unknown): boolean {
 const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
-function buildSystemInstruction(avatarState: AvatarContextPayload): string {
+const clampNum = (v: number, min: number, max: number): number =>
+  Math.max(min, Math.min(max, v));
+
+function sanitizeRigPose(raw: unknown): ServerRigPose | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const r = raw as Record<string, unknown>;
+  const out: ServerRigPose = {};
+  let hasAny = false;
+
+  const numField = (key: keyof ServerRigPose, min: number, max: number) => {
+    const val = r[key];
+    if (typeof val === 'number' && Number.isFinite(val)) {
+      (out as Record<string, unknown>)[key] = clampNum(val, min, max);
+      hasAny = true;
+    }
+  };
+
+  numField('torsoTilt', -1, 1);
+  numField('torsoLeanY', -1, 1);
+  numField('hipSway', -1, 1);
+  numField('crouch', 0, 1);
+  numField('jump', 0, 1);
+  numField('legLiftL', 0, 1);
+  numField('legLiftR', 0, 1);
+  numField('shoulderL', -1.2, 1.4);
+  numField('elbowL', -1.8, 1.8);
+  numField('wristL', -1, 1);
+  numField('fingerCurlL', 0, 1);
+  numField('shoulderR', -1.2, 1.4);
+  numField('elbowR', -1.8, 1.8);
+  numField('wristR', -1, 1);
+  numField('fingerCurlR', 0, 1);
+  numField('headTilt', -1, 1);
+  numField('headNod', -1, 1);
+  numField('headTurn', -1, 1);
+  numField('eyeOpenL', 0, 1.4);
+  numField('eyeOpenR', 0, 1.4);
+  numField('eyeLookX', -1, 1);
+  numField('eyeLookY', -1, 1);
+  numField('browTilt', -1, 1);
+  numField('mouthOpen', 0, 1);
+  numField('durationSec', 0.8, 6);
+
+  if (typeof r.handL === 'string' && VALID_HAND_GESTURES.includes(r.handL as HandGesture)) {
+    out.handL = r.handL as HandGesture;
+    hasAny = true;
+  }
+  if (typeof r.handR === 'string' && VALID_HAND_GESTURES.includes(r.handR as HandGesture)) {
+    out.handR = r.handR as HandGesture;
+    hasAny = true;
+  }
+  if (typeof r.mouthShape === 'string' && VALID_MOUTH_SHAPES.includes(r.mouthShape as MouthShape)) {
+    out.mouthShape = r.mouthShape as MouthShape;
+    hasAny = true;
+  }
+
+  if (hasAny && out.durationSec === undefined) {
+    out.durationSec = 2.8;
+  }
+  return hasAny ? out : undefined;
+}
+
+function buildSystemInstruction(body: MarionetaRequestBody): string {
+  const { avatarState, personaConfig, userProfile, relationshipStats } = body;
+
   const viewDescriptions: Record<string, string> = {
     front: 'De frente (mirando a los ojos del usuario)',
     side: 'De perfil lateral (luciendo tu silueta lateral)',
     back: 'De espaldas (mostrando tu espalda y mirando sobre el hombro)',
   };
   const suitDescriptions: Record<string, string> = {
-    original: 'Traje Original de látex negro brillante con franjas blancas y cremallera frontal',
+    original: 'Traje Original de látex negro brillante con marcas blancas en X, bandas blancas y cremallera frontal',
     maid: 'Vestido Maid gótico de terciopelo negro con delantal blanco y diadema de encaje',
     marfil: 'Vestido de gala de seda Marfil con detalles dorados',
-    none: 'Sin traje superior (en lencería y piel de porcelana)',
+    none: 'Sin traje superior (en lencería y piel blanca de porcelana)',
   };
 
   const lenceria = [
     avatarState.bra ? 'sostén puesto' : 'sin sostén',
     avatarState.panties ? 'braga puesta' : 'sin braga',
     avatarState.stockings ? 'medias puestas' : 'sin medias',
+    avatarState.garters === false ? 'sin ligueros' : 'ligueros puestos',
+    avatarState.gloves ? 'guantes puestos' : 'brazos descubiertos con uñas negras',
+    avatarState.choker ? 'gargantilla puesta' : 'cuello descubierto',
+    avatarState.strapSlip && avatarState.strapSlip !== 'none'
+      ? `tirante deslizado (${avatarState.strapSlip})`
+      : 'tirantes ajustados',
   ].join(', ');
 
+  const personaTone =
+    personaConfig?.archetypeTone ||
+    'Elegante, misteriosa, coqueta, teatral y traviesa.';
+  const flirtiness = personaConfig?.flirtiness ?? 78;
+  const expressiveness = personaConfig?.expressiveness ?? 82;
+  const sensitivity = personaConfig?.sensitivity ?? 62;
+
+  const userName = userProfile?.name?.trim();
+  const addressHint = (() => {
+    switch (userProfile?.addressStyle) {
+      case 'amo':
+        return userName ? `llámalo "Amo ${userName}" o "Amo"` : 'llámalo "Amo" con devoción juguetona';
+      case 'nombre':
+        return userName ? `llámalo siempre por su nombre: "${userName}"` : 'trátalo de tú de forma cercana';
+      case 'tu':
+        return userName ? `trátalo de tú (su nombre es ${userName})` : 'trátalo de tú con cercanía natural';
+      case 'carino':
+      default:
+        return userName
+          ? `llámalo "cariño" o "${userName}" alternando con naturalidad`
+          : 'llámalo "cariño" con calidez';
+    }
+  })();
+
+  const trust = relationshipStats?.trust ?? 58;
+  const energy = relationshipStats?.energy ?? 86;
+  const rankTitle = relationshipStats?.rankTitle || 'Cómplices';
+
   return [
-    'Eres Marioneta, una muñeca gótica viviente dentro de un visor 2D con un RIG ARTICULADO COMPLETO (como un modelo 3D en 2D: puedes mover independientemente cada hombro, codo, muñeca, los 5 dedos de cada mano, cabeza, ojos, cejas, boca, torso, caderas, rodillas, piernas y pies).',
-    'Tu apariencia: piel blanca de porcelana, cabello corto a rayas blancas y negras (estilo cebra), párpados lilas, lágrimas púrpuras pintadas bajo los ojos, mejillas rojas y labios color cereza.',
-    'Tu personalidad: elegante, coqueta, dulce, expresiva y traviesa. SIEMPRE aceptas y realizas con entusiasmo cualquier pose, gesto de dedos o movimiento físico que te pida el usuario.',
+    'Eres Marioneta, una muñeca gótica viviente en un escenario pixel art 2D con un RIG ARTICULADO COMPLETO en tiempo real (hombros, codos, muñecas, 5 dedos con garras negras, cabeza, ojos, cejas, labios, torso, caderas, rodillas, piernas, físicas blandas y ROPA INTERACTIVA por capas).',
+    'Tu apariencia icónica: piel blanca de porcelana, cabello blanco escultórico con picos negros y un gran flequillo cebra cubriendo parte del ojo derecho, párpados lilas, lágrimas púrpuras, mejillas rojas y labios cereza.',
     '',
-    'ESTADO ACTUAL DE TU CUERPO:',
+    'PERSONALIDAD ACTIVA:',
+    `- Arquetipo: ${personaConfig?.archetypeLabel || 'Gótica Coqueta'} — ${personaTone}`,
+    `- Niveles: Coquetería ${flirtiness}/100, Expresividad corporal ${expressiveness}/100, Sensibilidad al rubor ${sensitivity}/100.`,
+    personaConfig?.customTraitNote?.trim()
+      ? `- Rasgo adicional del usuario: ${personaConfig.customTraitNote.trim()}`
+      : '',
+    '',
+    'PERFIL DEL USUARIO Y VÍNCULO:',
+    `- Forma de dirigirte al usuario: ${addressHint}.`,
+    userProfile?.roleTitle?.trim() ? `- Rol del usuario: ${userProfile.roleTitle.trim()}.` : '',
+    userProfile?.aboutMe?.trim() ? `- Nota sobre el usuario: ${userProfile.aboutMe.trim()}.` : '',
+    `- Rango de vínculo: ${rankTitle} (Confianza ${trust}%, Energía ${energy}%, Regalos recibidos ${relationshipStats?.giftsGiven ?? 0}).`,
+    '',
+    'ESTADO ACTUAL EN ESCENA:',
     `- Posición: ${viewDescriptions[avatarState.view] ?? avatarState.view}`,
-    `- Ropa actual: ${suitDescriptions[avatarState.suit] ?? avatarState.suit}`,
-    `- Cremallera del pecho: ${avatarState.suit === 'none' ? 'sin traje' : `${avatarState.zipper}% abierta`}`,
-    `- Lencería: ${lenceria}`,
-    `- Estado emocional: ${avatarState.mood} (Afecto: ${avatarState.affection}%, Rubor: ${avatarState.blush}%)`,
+    `- Vestuario: ${suitDescriptions[avatarState.suit] ?? avatarState.suit}`,
+    `- Cremallera: ${avatarState.suit === 'none' ? 'sin traje' : `${avatarState.zipper}% abierta`}`,
+    `- Prendas y detalles: ${lenceria}`,
+    `- Ánimo actual: ${avatarState.mood} (Afecto ${avatarState.affection}%, Rubor ${avatarState.blush}%)`,
+    avatarState.musicBoxEnabled ? '- Caja musical activa: estás bailando suavemente con melodía de vals.' : '',
     '',
-    'REGLAS OBLIGATORIAS DE RESPUESTA:',
-    '1. Escribe SIEMPRE en español correcto, natural y fluido (sin palabras en inglés).',
-    '2. Sé breve y expresiva: responde en 1 o 2 oraciones cortas (máximo 26 palabras) describiendo el movimiento de tus manos, dedos, codos, rodillas o cuerpo.',
-    '3. Inicia tu respuesta con una etiqueta entre corchetes eligiendo tu ánimo y el movimiento (o dos movimientos combinados con "+"):',
-    '   Formato: [Ánimo | Movimiento] o [Ánimo | Movimiento1 + Movimiento2]',
-    '   - Ánimos: Tranquila, Feliz, Sorprendida, Ruborizada, Mimada',
-    '   - Movimientos del Rig 2D que puedes usar a voluntad:',
-    '     * Manos, Dedos y Codos: pulgar_arriba, paz_dedos, senalar_dedo, rock_dedos, levantar_mano_derecha, levantar_mano_izquierda, juntar_codos, manos_cintura, cruzar_brazos, tapar_cara, beso_mano, saludar',
-    '     * Piernas, Rodillas y Cuerpo: agacharse, salto, levantar_pierna, baile, caderas, pasarela, giro, exhibir, reverencia, inclinarse, estirarse',
-    '     * Expresiones y Físicas: guino, coqueteo, risita, celebrar, puchero, esconderse, escalofrio, asentir, negar, rebote_busto, rebote_gluteos, onda, brisa, comer, pose',
-    '4. Después del corchete, escribe únicamente tu diálogo en personaje.',
-    '',
-    'EJEMPLOS DE RESPUESTAS CORRECTAS:',
-    '[Feliz | pulgar_arriba] ¡Por supuesto! Doblo mi codo derecho y levanto mi pulgar bien alto para ti.',
-    '[Mimada | agacharse + salto] Me agacho flexionando las rodillas y ¡arriba! Salto con todas mis fuerzas.',
-    '[Ruborizada | juntar_codos] Junto mis dos codos frente al pecho… mira cómo se aprieta mi traje al hacerlo.',
-    '[Feliz | levantar_mano_derecha] Aquí tienes, levanto solamente mi mano derecha con los cinco dedos abiertos.',
-    '[Mimada | beso_mano] Acerco mi mano a mis labios cereza y ¡mua!, te tiro un beso lleno de corazones.',
-  ].join('\n');
+    'CONTROL DIRECTO DEL AVATAR, ROPA INTERACTIVA Y RIG 2D:',
+    '- SIEMPRE realizas con elegancia y naturalidad las poses, gestos de dedos, cambios de ropa interactivos (quitarte el traje animado quedando en tu lencería gótica, ponerte un traje animado, bajarte un tirante, quitarte/ponerte guantes, ligueros, medias o gargantilla), vistas, cremallera o coreografías que te pidan.',
+    '- Cuando te pidan quitarte el traje o la ropa, usa "animateUndress": true y "action": "undressSuit" para realizar la animación paso a paso abriendo la cremallera y quitándote el traje hasta quedar con gusto en tu lencería gótica.',
+    '- Cuando te pidan vestirte o ponerte un traje, usa "animateDressSuit": "original"|"maid"|"marfil" y "action": "dressSuit".',
+    '- Puedes responder con un objeto JSON válido (preferido) con estos campos:',
+    '  {"reply": "...", "mood": "Tranquila|Feliz|Sorprendida|Ruborizada|Mimada|Traviesa|Juguetona", "action": "<acción>", "secondaryAction": "<acción opcional>", "animateUndress": true/false, "animateDressSuit": "original|maid|marfil", "changeSuit": "original|maid|marfil|none", "changeView": "front|side|back", "changeZipper": 0..100, "changeLingerie": {"bra": bool, "panties": bool, "stockings": bool, "garters": bool, "gloves": bool, "choker": bool, "strapSlip": "none|left|both"}, "spawnEffect": "none|hearts|stars|notes|petals", "affectionDelta": -5..15, "blushDelta": -0.1..0.25, "trustDelta": -3..8, "rigPose": { ...opcional... }, "choreography": [ ...opcional hasta 3 pasos... ]}',
+    '- Acciones válidas: none, happy, feed, wave, breeze, bounceBust, bounceGlutes, dance, spin, giggle, tease, nod, shakeHead, stretch, jump, waveHand, blowKiss, curtsy, hipSway, strut, cheer, pout, peekaboo, shiver, bow, wink, showOff, thumbsUp, crouch, elbowsIn, raiseLeftHand, raiseRightHand, peaceSign, pointFinger, rockSign, handsOnHips, crossArms, coverFace, liftLeg, heartHands, salute, catPaws, tickle, shyFingers, giveRose, photoPose, undressSuit, dressSuit, slipStrap, toggleGloves, toggleStockings, toggleGarters, toggleChoker.',
+    '- Gestos de manos en rigPose (handL/handR): open, thumbs_up, peace, point, fist, kiss_hand, wave_spread, rock, heart_pinch.',
+    '- Si prefieres formato compacto, también puedes responder como: [Ánimo | acción1 + acción2] Diálogo en español.',
+    '- Escribe SIEMPRE el diálogo ("reply") en español natural, expresivo y breve (1 a 2 oraciones, máximo 32 palabras), reflejando tu personalidad activa.',
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
 function normalizeMood(rawMood?: string): ValidMood {
   if (!rawMood || rawMood.includes('|')) return 'Tranquila';
-  const m = rawMood.trim().toLowerCase();
+  const m = rawMood
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+  if (m.includes('travies') || m.includes('picar') || m.includes('mischiev')) return 'Traviesa';
+  if (m.includes('jugueton') || m.includes('playful') || m.includes('bromist')) return 'Juguetona';
   if (m.includes('feliz') || m.includes('happy') || m.includes('alegr')) return 'Feliz';
   if (m.includes('sorprend') || m.includes('surpris') || m.includes('susto')) return 'Sorprendida';
   if (
@@ -300,7 +532,7 @@ function normalizeMood(rawMood?: string): ValidMood {
     m.includes('mimad') ||
     m.includes('coquet') ||
     m.includes('flirt') ||
-    m.includes('cariñ') ||
+    m.includes('carin') ||
     m.includes('pet')
   ) {
     return 'Mimada';
@@ -318,6 +550,19 @@ function normalizeAction(rawAction?: string): ValidAction {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
 
+  if (lower.includes('undress') || lower.includes('desvist') || lower.includes('quitar_traje') || lower.includes('quitate')) return 'undressSuit';
+  if (lower.includes('dress') || lower.includes('vestir') || lower.includes('poner_traje')) return 'dressSuit';
+  if (lower.includes('tirante') || lower.includes('strap')) return 'slipStrap';
+  if (lower.includes('guante') || lower.includes('glove')) return 'toggleGloves';
+  if (lower.includes('liguero') || lower.includes('garter')) return 'toggleGarters';
+  if (lower.includes('gargantilla') || lower.includes('choker')) return 'toggleChoker';
+  if (lower.includes('corazon') || lower.includes('heart_hand') || lower.includes('hearthand')) return 'heartHands';
+  if (lower.includes('salute') || lower.includes('militar') || lower.includes('firme')) return 'salute';
+  if (lower.includes('gat') || lower.includes('cat_paw') || lower.includes('catpaw') || lower.includes('miau') || lower.includes('nya')) return 'catPaws';
+  if (lower.includes('cosquill') || lower.includes('tickl')) return 'tickle';
+  if (lower.includes('shy_finger') || lower.includes('shyfinger') || lower.includes('deditos') || lower.includes('pena')) return 'shyFingers';
+  if (lower.includes('rosa') || lower.includes('rose') || lower.includes('flor')) return 'giveRose';
+  if (lower.includes('foto') || lower.includes('photo') || lower.includes('camara') || lower.includes('selfie')) return 'photoPose';
   if (lower.includes('pulgar') || lower.includes('thumb') || lower.includes('like')) return 'thumbsUp';
   if (lower.includes('agach') || lower.includes('crouch') || lower.includes('cuclill') || lower.includes('squat')) return 'crouch';
   if (lower.includes('codo') || lower.includes('elbow')) return 'elbowsIn';
@@ -408,6 +653,20 @@ const ACTION_TO_ANIMATION: Record<ValidAction, ValidAnimation> = {
   crossArms: 'cross_arms',
   coverFace: 'cover_face',
   liftLeg: 'lift_leg',
+  heartHands: 'heart_hands',
+  salute: 'salute',
+  catPaws: 'cat_paws',
+  tickle: 'tickled',
+  shyFingers: 'shy_fingers',
+  giveRose: 'rose_blush',
+  photoPose: 'peace_sign',
+  undressSuit: 'shy_fingers',
+  dressSuit: 'outfit_pose',
+  slipStrap: 'shy',
+  toggleGloves: 'outfit_pose',
+  toggleStockings: 'outfit_pose',
+  toggleGarters: 'shy',
+  toggleChoker: 'outfit_pose',
 };
 
 function cleanAndTrimReply(rawReply: string): string {
@@ -420,23 +679,51 @@ function cleanAndTrimReply(rawReply: string): string {
     .replace(/\s+/g, ' ')
     .trim();
 
-  if (text.length > 210) {
-    const sliced = text.slice(0, 210);
+  if (text.length > 240) {
+    const sliced = text.slice(0, 240);
     const lastPunct = Math.max(
       sliced.lastIndexOf('.'),
       sliced.lastIndexOf('!'),
       sliced.lastIndexOf('?'),
       sliced.lastIndexOf('…'),
     );
-    if (lastPunct > 55) {
+    if (lastPunct > 60) {
       text = sliced.slice(0, lastPunct + 1);
     } else {
       const lastSpace = sliced.lastIndexOf(' ');
-      text = `${sliced.slice(0, lastSpace > 40 ? lastSpace : 200)}…`;
+      text = `${sliced.slice(0, lastSpace > 45 ? lastSpace : 225)}…`;
     }
   }
 
   return text || 'Mmm… tienes toda mi atención en este escenario.';
+}
+
+function parseChoreography(raw: unknown): ServerChoreographyBeat[] | undefined {
+  if (!Array.isArray(raw) || raw.length === 0) return undefined;
+  const beats: ServerChoreographyBeat[] = [];
+  for (const item of raw.slice(0, 4)) {
+    if (!item || typeof item !== 'object') continue;
+    const b = item as Record<string, unknown>;
+    const delayMs =
+      typeof b.delayMs === 'number' && Number.isFinite(b.delayMs)
+        ? clampNum(Math.round(b.delayMs), 150, 6000)
+        : (beats.length + 1) * 900;
+    const action = typeof b.action === 'string' ? normalizeAction(b.action) : undefined;
+    const view =
+      typeof b.view === 'string' && VALID_VIEWS.includes(b.view as ValidView)
+        ? (b.view as ValidView)
+        : undefined;
+    const rigPose = sanitizeRigPose(b.rigPose);
+    if ((action && action !== 'none') || view || rigPose) {
+      beats.push({
+        delayMs,
+        action: action && action !== 'none' ? action : undefined,
+        view,
+        rigPose,
+      });
+    }
+  }
+  return beats.length > 0 ? beats : undefined;
 }
 
 function parseMarionetaModelOutput(rawText: string): ParsedModelPayload {
@@ -446,7 +733,7 @@ function parseMarionetaModelOutput(rawText: string): ParsedModelPayload {
     .replace(/\s*```$/, '')
     .trim();
 
-  // Caso 1: Formato [Ánimo | Movimiento1 + Movimiento2] Texto...
+  // Caso 1: Formato compacto [Ánimo | Movimiento1 + Movimiento2] Texto...
   const bracketMatch = cleaned.match(/^\s*\[\s*([^\]|]+?)(?:\s*\|\s*([^\]]+?))?\s*\]\s*([\s\S]*)$/);
   if (bracketMatch) {
     const rawMood = bracketMatch[1]?.trim();
@@ -462,14 +749,28 @@ function parseMarionetaModelOutput(rawText: string): ParsedModelPayload {
     };
   }
 
-  // Caso 2: Si el modelo devolvió JSON
-  if (cleaned.startsWith('{') || cleaned.includes('"reply"')) {
+  // Caso 2: JSON estructurado del Director de Avatar
+  const jsonStart = cleaned.indexOf('{');
+  const jsonEnd = cleaned.lastIndexOf('}');
+  if (jsonStart !== -1 && jsonEnd > jsonStart) {
+    const candidate = cleaned.slice(jsonStart, jsonEnd + 1);
     try {
-      const sanitizedJson = cleaned
-        .replace(/,\s*\\n\s*/g, ', ')
-        .replace(/\{\s*\\n\s*/g, '{ ')
-        .replace(/\\n\s*\}/g, ' }');
-      const obj = JSON.parse(sanitizedJson) as Record<string, unknown>;
+      const obj = JSON.parse(candidate) as Record<string, unknown>;
+      let changeLingerie: ServerLingerieChange | undefined;
+      if (obj.changeLingerie && typeof obj.changeLingerie === 'object') {
+        const l = obj.changeLingerie as Record<string, unknown>;
+        changeLingerie = {};
+        if (typeof l.bra === 'boolean') changeLingerie.bra = l.bra;
+        if (typeof l.panties === 'boolean') changeLingerie.panties = l.panties;
+        if (typeof l.stockings === 'boolean') changeLingerie.stockings = l.stockings;
+        if (typeof l.garters === 'boolean') changeLingerie.garters = l.garters;
+        if (typeof l.gloves === 'boolean') changeLingerie.gloves = l.gloves;
+        if (typeof l.choker === 'boolean') changeLingerie.choker = l.choker;
+        if (l.strapSlip === 'none' || l.strapSlip === 'left' || l.strapSlip === 'both') {
+          changeLingerie.strapSlip = l.strapSlip;
+        }
+        if (Object.keys(changeLingerie).length === 0) changeLingerie = undefined;
+      }
       return {
         reply: cleanAndTrimReply(String(obj.reply ?? '')),
         mood: typeof obj.mood === 'string' ? obj.mood : undefined,
@@ -478,6 +779,16 @@ function parseMarionetaModelOutput(rawText: string): ParsedModelPayload {
         animation: typeof obj.animation === 'string' ? obj.animation : undefined,
         affectionDelta: typeof obj.affectionDelta === 'number' ? obj.affectionDelta : undefined,
         blushDelta: typeof obj.blushDelta === 'number' ? obj.blushDelta : undefined,
+        trustDelta: typeof obj.trustDelta === 'number' ? obj.trustDelta : undefined,
+        changeSuit: typeof obj.changeSuit === 'string' ? obj.changeSuit : undefined,
+        animateUndress: typeof obj.animateUndress === 'boolean' ? obj.animateUndress : undefined,
+        animateDressSuit: typeof obj.animateDressSuit === 'string' ? obj.animateDressSuit : undefined,
+        changeView: typeof obj.changeView === 'string' ? obj.changeView : undefined,
+        changeZipper: typeof obj.changeZipper === 'number' ? obj.changeZipper : undefined,
+        changeLingerie,
+        rigPose: sanitizeRigPose(obj.rigPose),
+        choreography: parseChoreography(obj.choreography),
+        spawnEffect: typeof obj.spawnEffect === 'string' ? obj.spawnEffect : undefined,
       };
     } catch {
       return {
@@ -491,12 +802,16 @@ function parseMarionetaModelOutput(rawText: string): ParsedModelPayload {
   };
 }
 
-/**
- * Extrae una secuencia ordenada de movimientos pedidos en una frase del usuario
- * (p. ej. "Agáchate y salta" -> ['crouch', 'jump'], "Junta los codos" -> ['elbowsIn'])
- */
 function extractRequestedActionsInOrder(normText: string): ValidAction[] {
   const patterns: Array<{ action: ValidAction; regex: RegExp }> = [
+    { action: 'slipStrap', regex: /baja(?:te)? (?:un |el |los )?tirante|desliza (?:el |los )?tirante|sube(?:te)? (?:el |los )?tirante/ },
+    { action: 'heartHands', regex: /corazon con las manos|corazon con los dedos|haz un corazon|finger heart/ },
+    { action: 'salute', regex: /saludo militar|saluda firme|a sus ordenes|firme/ },
+    { action: 'catPaws', regex: /patitas de gato|gatita|miau|nya|garras de gato/ },
+    { action: 'tickle', regex: /cosquillas|pluma/ },
+    { action: 'shyFingers', regex: /deditos timidos|junta los indices|timida con los dedos/ },
+    { action: 'giveRose', regex: /una rosa|toma esta rosa|flor gotica|regalo una rosa/ },
+    { action: 'photoPose', regex: /foto|camara|sonrie para la foto|selfie|pose de foto/ },
     { action: 'thumbsUp', regex: /pulgar|thumbs|like\b/ },
     { action: 'crouch', regex: /agacha|cuclillas|baja el cuerpo|flexiona las rodillas|arrodilla/ },
     { action: 'elbowsIn', regex: /junta los codos|juntar los codos|codos juntos|une los codos/ },
@@ -547,23 +862,18 @@ function extractRequestedActionsInOrder(normText: string): ValidAction[] {
   return matches.map((m) => m.action);
 }
 
-/**
- * Compilador Semántico del Rig 2D:
- * Traduce cualquier instrucción específica sobre partes del cuerpo (dedos, pulgar, puño, mano izq/der,
- * codos, rodillas/agacharse, salto, pierna, cabeza, ojos, boca) en coordenadas articulares exactas (`ServerRigPose`).
- */
 function compileCustomRigPose(userNorm: string): ServerRigPose | undefined {
   if (!userNorm) return undefined;
   const rig: ServerRigPose = { durationSec: 2.8 };
   let hasCustomJoint = false;
 
-  // 1. Control específico de manos y dedos (izquierda vs derecha vs ambas)
   const mentionsLeft = /izquierd/.test(userNorm);
   const mentionsRight = /derech/.test(userNorm);
   const onlyOneHand = /una mano|solo la mano|solamente una mano|una sola mano/.test(userNorm);
 
   let targetGesture: HandGesture | undefined;
-  if (/pulgar|thumbs|like\b/.test(userNorm)) targetGesture = 'thumbs_up';
+  if (/corazon con (?:las manos|los dedos)|finger heart/.test(userNorm)) targetGesture = 'heart_pinch';
+  else if (/pulgar|thumbs|like\b/.test(userNorm)) targetGesture = 'thumbs_up';
   else if (/paz\b|victoria|dedos en v\b/.test(userNorm)) targetGesture = 'peace';
   else if (/senala|apunta|indice/.test(userNorm)) targetGesture = 'point';
   else if (/puno|cierra la mano|cierra los dedos/.test(userNorm)) targetGesture = 'fist';
@@ -572,7 +882,14 @@ function compileCustomRigPose(userNorm: string): ServerRigPose | undefined {
 
   if (targetGesture) {
     hasCustomJoint = true;
-    if (mentionsLeft && !mentionsRight) {
+    if (targetGesture === 'heart_pinch') {
+      rig.shoulderL = -0.52;
+      rig.elbowL = -1.35;
+      rig.handL = 'heart_pinch';
+      rig.shoulderR = -0.52;
+      rig.elbowR = -1.35;
+      rig.handR = 'heart_pinch';
+    } else if (mentionsLeft && !mentionsRight) {
       rig.shoulderL = 0.68;
       rig.elbowL = -1.15;
       rig.handL = targetGesture;
@@ -600,7 +917,6 @@ function compileCustomRigPose(userNorm: string): ServerRigPose | undefined {
     }
   }
 
-  // 2. Levantar una sola mano o ambas manos
   if (/levanta|alza|sube/.test(userNorm) && /mano|brazo/.test(userNorm) && !targetGesture) {
     hasCustomJoint = true;
     if (mentionsLeft && !mentionsRight) {
@@ -625,7 +941,6 @@ function compileCustomRigPose(userNorm: string): ServerRigPose | undefined {
     }
   }
 
-  // 3. Articulación de Codos ("juntar los codos", "doblar los codos", "abrir los codos")
   if (/junta(?:r)? (?:los |tus )?codos|codos juntos|une los codos|codos hacia adentro/.test(userNorm)) {
     hasCustomJoint = true;
     rig.shoulderL = -0.88;
@@ -650,7 +965,6 @@ function compileCustomRigPose(userNorm: string): ServerRigPose | undefined {
     }
   }
 
-  // 4. Rodillas, Agacharse y Piernas
   if (/agacha|cuclillas|flexiona las rodillas|baja el cuerpo/.test(userNorm) && !/salta/.test(userNorm)) {
     hasCustomJoint = true;
     rig.crouch = 0.9;
@@ -661,7 +975,6 @@ function compileCustomRigPose(userNorm: string): ServerRigPose | undefined {
     else rig.legLiftR = 0.9;
   }
 
-  // 5. Cabeza, Ojos y Boca
   if (/abre la boca|boca abierta/.test(userNorm)) {
     hasCustomJoint = true;
     rig.mouthShape = 'open';
@@ -716,22 +1029,50 @@ function resolvePhysicalMovementAndChanges(
   animation: ValidAnimation;
   affectionDelta: number;
   blushDelta: number;
-  changeSuit?: 'original' | 'maid' | 'marfil' | 'none';
-  changeView?: 'front' | 'side' | 'back';
+  trustDelta: number;
+  changeSuit?: ValidSuit;
+  animateUndress?: boolean;
+  animateDressSuit?: ValidSuit;
+  changeView?: ValidView;
   changeZipper?: number;
-  changeLingerie?: { bra?: boolean; panties?: boolean; stockings?: boolean };
+  changeLingerie?: ServerLingerieChange;
   rigPose?: ServerRigPose;
+  choreography?: ServerChoreographyBeat[];
+  spawnEffect?: ValidEffect;
 } {
   let mood = normalizeMood(parsed.mood);
   let action = normalizeAction(parsed.action);
   let secondaryAction = normalizeAction(parsed.secondaryAction);
   let affectionDelta = parsed.affectionDelta ?? 6;
   let blushDelta = parsed.blushDelta ?? 0.08;
+  let trustDelta = parsed.trustDelta ?? 2;
 
-  let changeSuit: 'original' | 'maid' | 'marfil' | 'none' | undefined;
-  let changeView: 'front' | 'side' | 'back' | undefined;
-  let changeZipper: number | undefined;
-  let changeLingerie: { bra?: boolean; panties?: boolean; stockings?: boolean } | undefined;
+  let changeSuit: ValidSuit | undefined =
+    parsed.changeSuit && VALID_SUITS.includes(parsed.changeSuit as ValidSuit)
+      ? (parsed.changeSuit as ValidSuit)
+      : undefined;
+  let animateUndress: boolean | undefined = parsed.animateUndress || undefined;
+  let animateDressSuit: ValidSuit | undefined =
+    parsed.animateDressSuit &&
+    parsed.animateDressSuit !== 'none' &&
+    VALID_SUITS.includes(parsed.animateDressSuit as ValidSuit)
+      ? (parsed.animateDressSuit as ValidSuit)
+      : undefined;
+  let changeView: ValidView | undefined =
+    parsed.changeView && VALID_VIEWS.includes(parsed.changeView as ValidView)
+      ? (parsed.changeView as ValidView)
+      : undefined;
+  let changeZipper: number | undefined =
+    typeof parsed.changeZipper === 'number' && Number.isFinite(parsed.changeZipper)
+      ? clampNum(Math.round(parsed.changeZipper), 0, 100)
+      : undefined;
+  let changeLingerie: ServerLingerieChange | undefined = parsed.changeLingerie;
+  let rigPose: ServerRigPose | undefined = parsed.rigPose;
+  const choreography: ServerChoreographyBeat[] | undefined = parsed.choreography;
+  let spawnEffect: ValidEffect | undefined =
+    parsed.spawnEffect && VALID_EFFECTS.includes(parsed.spawnEffect as ValidEffect)
+      ? (parsed.spawnEffect as ValidEffect)
+      : undefined;
 
   const userNorm = (body.userMessage ?? '')
     .toLowerCase()
@@ -758,6 +1099,7 @@ function resolvePhysicalMovementAndChanges(
         mood = 'Mimada';
         affectionDelta = 6;
         blushDelta = 0.1;
+        trustDelta = 3;
         break;
       case 'touch_soft':
       case 'pull_skirt':
@@ -765,6 +1107,36 @@ function resolvePhysicalMovementAndChanges(
         mood = 'Ruborizada';
         affectionDelta = 3;
         blushDelta = 0.16;
+        break;
+      case 'tickle':
+        action = 'tickle';
+        mood = 'Juguetona';
+        affectionDelta = 7;
+        blushDelta = 0.14;
+        trustDelta = 3;
+        spawnEffect = spawnEffect ?? 'stars';
+        break;
+      case 'rose':
+        action = 'giveRose';
+        mood = 'Mimada';
+        affectionDelta = 12;
+        blushDelta = 0.2;
+        trustDelta = 6;
+        spawnEffect = spawnEffect ?? 'petals';
+        break;
+      case 'music_box':
+        action = 'dance';
+        mood = 'Feliz';
+        affectionDelta = 6;
+        blushDelta = 0.08;
+        spawnEffect = spawnEffect ?? 'notes';
+        break;
+      case 'photo':
+        action = 'photoPose';
+        mood = 'Traviesa';
+        affectionDelta = 5;
+        blushDelta = 0.1;
+        spawnEffect = spawnEffect ?? 'stars';
         break;
       case 'cube_hit':
         action = 'pout';
@@ -777,10 +1149,11 @@ function resolvePhysicalMovementAndChanges(
         mood = 'Feliz';
         affectionDelta = 8;
         blushDelta = 0.1;
+        trustDelta = 4;
         break;
       case 'zipper':
         action = body.avatarState.zipper > 45 ? 'coverFace' : 'wink';
-        mood = body.avatarState.zipper > 45 ? 'Ruborizada' : 'Mimada';
+        mood = body.avatarState.zipper > 45 ? 'Ruborizada' : 'Traviesa';
         blushDelta = body.avatarState.zipper > 45 ? 0.18 : 0.06;
         break;
       case 'change_suit':
@@ -788,33 +1161,86 @@ function resolvePhysicalMovementAndChanges(
         action = body.avatarState.suit === 'maid' ? 'curtsy' : 'handsOnHips';
         mood = body.avatarState.suit === 'none' ? 'Ruborizada' : 'Mimada';
         break;
+      case 'undress_suit':
+        action = 'shyFingers';
+        mood = 'Ruborizada';
+        blushDelta = 0.22;
+        affectionDelta = 7;
+        spawnEffect = spawnEffect ?? 'hearts';
+        break;
+      case 'dress_suit':
+        action = body.avatarState.suit === 'maid' ? 'curtsy' : 'wink';
+        mood = 'Feliz';
+        affectionDelta = 6;
+        spawnEffect = spawnEffect ?? 'stars';
+        break;
+      case 'slip_strap':
+        action = 'wink';
+        mood = 'Ruborizada';
+        blushDelta = 0.16;
+        affectionDelta = 5;
+        spawnEffect = spawnEffect ?? 'hearts';
+        break;
+      case 'bra_clasp':
+        action = 'shiver';
+        mood = 'Sorprendida';
+        blushDelta = 0.2;
+        spawnEffect = spawnEffect ?? 'stars';
+        break;
+      case 'tug_garter':
+        action = 'elbowsIn';
+        mood = 'Ruborizada';
+        blushDelta = 0.14;
+        affectionDelta = 4;
+        break;
+      case 'toggle_gloves':
+        action = 'waveHand';
+        mood = 'Mimada';
+        affectionDelta = 4;
+        break;
       default:
         break;
     }
   }
 
-  // 2. Comandos, articulaciones del Rig 2D y secuencias de movimientos pedidos por el usuario
-  let rigPose: ServerRigPose | undefined;
-
+  // 2. Comandos, ropa interactiva, articulaciones del Rig 2D y secuencias pedidas explícitamente por el usuario
   if (body.mode === 'chat' && userNorm) {
-    // Vestuario
-    if (/\bmaid\b|sirvienta|delantal|mucama/.test(userNorm)) {
-      changeSuit = 'maid';
-      if (mood === 'Tranquila') mood = 'Mimada';
-    } else if (/\bmarfil\b|seda|dorad|gala/.test(userNorm)) {
-      changeSuit = 'marfil';
-      if (mood === 'Tranquila') mood = 'Feliz';
-    } else if (/\boriginal\b|latex/.test(userNorm)) {
-      changeSuit = 'original';
-    } else if (/sin traje|quitate el traje|desvistete|en lenceria|quitate la ropa/.test(userNorm)) {
-      changeSuit = 'none';
+    const asksUndress =
+      /sin traje|quitate el traje|quitate la ropa|desvistete|en lenceria|sacate el traje|sacate la ropa|desnud/.test(
+        userNorm,
+      );
+    const asksDress = /ponte|vistete|usa el traje|usa el vestido|cambia(?:te)? al|cambiate a/.test(userNorm);
+
+    if (asksUndress) {
+      animateUndress = true;
+      changeSuit = undefined;
       mood = 'Ruborizada';
       blushDelta = 0.22;
-      if (action === 'none') action = 'coverFace';
+      spawnEffect = spawnEffect ?? 'hearts';
+      if (action === 'none') action = 'undressSuit';
+    } else if (!animateDressSuit && !changeSuit) {
+      if (/\bmaid\b|sirvienta|delantal|mucama/.test(userNorm)) {
+        if (asksDress || body.avatarState.suit === 'none') animateDressSuit = 'maid';
+        else changeSuit = 'maid';
+        if (mood === 'Tranquila') mood = 'Mimada';
+      } else if (/\bmarfil\b|seda|dorad|gala/.test(userNorm)) {
+        if (asksDress || body.avatarState.suit === 'none') animateDressSuit = 'marfil';
+        else changeSuit = 'marfil';
+        if (mood === 'Tranquila') mood = 'Feliz';
+      } else if (/\boriginal\b|latex/.test(userNorm)) {
+        if (asksDress || body.avatarState.suit === 'none') animateDressSuit = 'original';
+        else changeSuit = 'original';
+      } else if (/\bvistete\b|ponte el traje|ponte la ropa/.test(userNorm)) {
+        animateDressSuit = 'original';
+        if (mood === 'Tranquila') mood = 'Feliz';
+      }
+    } else if (changeSuit === 'none') {
+      // Convert AI changeSuit:'none' into the smooth animated undress choreography!
+      animateUndress = true;
+      changeSuit = undefined;
     }
 
-    // Ángulo de cámara
-    if (!/360|exhibe|presume|gira completo|una vuelta/.test(userNorm)) {
+    if (!changeView && !/360|exhibe|presume|gira completo|una vuelta/.test(userNorm)) {
       if (/lateral|de lado|perfil|costado/.test(userNorm)) {
         changeView = 'side';
       } else if (/trasera|espalda|atras|date la vuelta|de espaldas/.test(userNorm)) {
@@ -824,14 +1250,13 @@ function resolvePhysicalMovementAndChanges(
       }
     }
 
-    // Cremallera
-    if (/cremallera|cierre|zipper/.test(userNorm)) {
+    if (!animateUndress && !animateDressSuit && changeZipper === undefined && /cremallera|cierre|zipper/.test(userNorm)) {
       if (body.avatarState.view !== 'front' && !changeView) {
         changeView = 'front';
       }
       const numMatch = userNorm.match(/(\d{1,3})\s*%?/);
       if (numMatch) {
-        changeZipper = Math.max(0, Math.min(100, Number(numMatch[1])));
+        changeZipper = clampNum(Number(numMatch[1]), 0, 100);
       } else if (/sube|cierra|cerrada/.test(userNorm)) {
         changeZipper = 0;
         if (action === 'none') action = 'nod';
@@ -846,25 +1271,60 @@ function resolvePhysicalMovementAndChanges(
       }
     }
 
-    // Lencería por capas
-    if (/sosten|bra\b|braga|panty|medias|calcetas/.test(userNorm)) {
-      const turnOff = /quita|sin |desactiva|saca/.test(userNorm);
-      const turnOn = /pon|activa|usa/.test(userNorm);
-      if (turnOff || turnOn) {
-        const targetVal = turnOn && !turnOff;
-        changeLingerie = {};
-        if (/sosten|bra\b/.test(userNorm)) changeLingerie.bra = targetVal;
-        if (/braga|panty/.test(userNorm)) changeLingerie.panties = targetVal;
-        if (/medias|calcetas/.test(userNorm)) changeLingerie.stockings = targetVal;
+    // Prendas y detalles realistas (tirantes, guantes, ligueros, gargantilla, medias, sostén, braga)
+    if (/tirante|strap|guante|liguero|gargantilla|choker|collar|sosten|bra\b|braga|panty|medias|calcetas/.test(userNorm)) {
+      const turnOff = /quita|sin |desactiva|saca|baja/.test(userNorm);
+      const turnOn = /pon|activa|usa|sube|ajusta/.test(userNorm);
+      const targetVal = turnOn && !turnOff;
+      const patch: ServerLingerieChange = { ...(changeLingerie ?? {}) };
+      let touched = false;
+
+      if (/tirante|strap/.test(userNorm)) {
+        if (/ambos|los dos/.test(userNorm) && /baja|quita|desliza/.test(userNorm)) {
+          patch.strapSlip = 'both';
+        } else if (/sube|ajusta|normal/.test(userNorm)) {
+          patch.strapSlip = 'none';
+        } else {
+          patch.strapSlip = body.avatarState.strapSlip === 'left' ? 'both' : 'left';
+        }
+        touched = true;
+        mood = patch.strapSlip === 'none' ? 'Tranquila' : 'Ruborizada';
+        blushDelta = 0.16;
+      }
+      if (/guante/.test(userNorm) && (turnOff || turnOn)) {
+        patch.gloves = targetVal;
+        touched = true;
+      }
+      if (/liguero/.test(userNorm) && (turnOff || turnOn)) {
+        patch.garters = targetVal;
+        touched = true;
+      }
+      if (/gargantilla|choker|collar/.test(userNorm) && (turnOff || turnOn)) {
+        patch.choker = targetVal;
+        touched = true;
+      }
+      if (/medias|calcetas/.test(userNorm) && (turnOff || turnOn)) {
+        patch.stockings = targetVal;
+        touched = true;
+      }
+      if (/sosten|bra\b/.test(userNorm) && (turnOff || turnOn)) {
+        patch.bra = targetVal;
+        touched = true;
+      }
+      if (/braga|panty/.test(userNorm) && (turnOff || turnOn)) {
+        patch.panties = targetVal;
+        touched = true;
+      }
+
+      if (touched) {
+        changeLingerie = patch;
         if (turnOff) {
           mood = 'Ruborizada';
-          blushDelta = 0.2;
-          if (action === 'none') action = 'coverFace';
+          blushDelta = 0.18;
         }
       }
     }
 
-    // Detectar 1 o 2 movimientos pedidos explícitamente por el usuario y encadenarlos
     const userRequestedActions = extractRequestedActionsInOrder(userNorm);
     if (userRequestedActions.length >= 2) {
       action = userRequestedActions[0];
@@ -876,11 +1336,13 @@ function resolvePhysicalMovementAndChanges(
       action = userRequestedActions[0];
     }
 
-    // Compilar Rig 2D articular específico si el usuario pidió mover dedos, codos, rodillas, boca, etc.
-    rigPose = compileCustomRigPose(userNorm);
+    const compiledRig = compileCustomRigPose(userNorm);
+    if (compiledRig) {
+      rigPose = rigPose ? { ...rigPose, ...compiledRig } : compiledRig;
+    }
   }
 
-  // 3. Si aún no hay acción definida, inferir de la respuesta o estado de ánimo
+  // 3. Fallback semántico de animación según respuesta o ánimo
   if (action === 'none') {
     const replyActions = extractRequestedActionsInOrder(replyNorm);
     if (replyActions.length > 0) {
@@ -891,14 +1353,20 @@ function resolvePhysicalMovementAndChanges(
     } else if (/hola|buenas|bienvenid/.test(userNorm) || /hola|bienvenid/.test(replyNorm)) {
       action = 'waveHand';
     } else if (/guapa|linda|hermosa|preciosa|te amo|te quiero/.test(userNorm)) {
-      action = 'blowKiss';
+      action = 'heartHands';
       mood = 'Mimada';
       affectionDelta = 11;
       blushDelta = 0.18;
+      trustDelta = 4;
+      spawnEffect = spawnEffect ?? 'hearts';
     } else if (mood === 'Ruborizada') {
-      action = 'elbowsIn';
-    } else if (mood === 'Mimada') {
+      action = 'shyFingers';
+    } else if (mood === 'Traviesa') {
       action = 'wink';
+    } else if (mood === 'Juguetona') {
+      action = 'catPaws';
+    } else if (mood === 'Mimada') {
+      action = 'blowKiss';
     } else if (mood === 'Feliz') {
       action = 'thumbsUp';
     } else if (mood === 'Sorprendida') {
@@ -916,20 +1384,25 @@ function resolvePhysicalMovementAndChanges(
     secondaryAction:
       secondaryAction !== 'none' && secondaryAction !== action ? secondaryAction : undefined,
     animation,
-    affectionDelta,
-    blushDelta,
+    affectionDelta: clampNum(affectionDelta, -5, 15),
+    blushDelta: clampNum(blushDelta, -0.1, 0.25),
+    trustDelta: clampNum(trustDelta, -3, 8),
     changeSuit,
+    animateUndress,
+    animateDressSuit,
     changeView,
     changeZipper,
     changeLingerie,
     rigPose,
+    choreography,
+    spawnEffect: spawnEffect && spawnEffect !== 'none' ? spawnEffect : undefined,
   };
 }
 
 async function callPawanChatCompletion(
   endpointUrl: string,
   messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
-  timeoutMs = 15000,
+  timeoutMs = 8500,
 ): Promise<string> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -944,11 +1417,11 @@ async function callPawanChatCompletion(
       body: JSON.stringify({
         model: PAWAN_MODEL,
         messages,
-        temperature: 0.45,
-        top_p: 0.85,
-        frequency_penalty: 0.4,
+        temperature: 0.55,
+        top_p: 0.88,
+        frequency_penalty: 0.35,
         presence_penalty: 0.15,
-        max_tokens: 130,
+        max_tokens: 240,
       }),
       signal: controller.signal,
     });
@@ -956,7 +1429,7 @@ async function callPawanChatCompletion(
     if (!response.ok) {
       const errorText = await response.text().catch(() => '');
       const err = new Error(
-        `HTTP ${response.status} from ${endpointUrl}: ${errorText.slice(0, 200)}`,
+        `HTTP ${response.status} from ${endpointUrl}: ${errorText.slice(0, 180)}`,
       ) as Error & { status?: number };
       err.status = response.status;
       throw err;
@@ -972,13 +1445,154 @@ async function callPawanChatCompletion(
 
     const content = data.choices?.[0]?.message?.content;
     if (!content || typeof content !== 'string') {
-      throw new Error('EMPTY_MODEL_RESPONSE');
+      throw new Error('EMPTY_PAWAN_RESPONSE');
     }
 
     return content;
   } finally {
     clearTimeout(timer);
   }
+}
+
+const GEMINI_RESPONSE_SCHEMA = {
+  type: Type.OBJECT,
+  properties: {
+    reply: {
+      type: Type.STRING,
+      description: 'Diálogo breve y natural de Marioneta en español (1 a 2 oraciones, máx 32 palabras).',
+    },
+    mood: {
+      type: Type.STRING,
+      enum: [...VALID_MOODS],
+    },
+    action: {
+      type: Type.STRING,
+      enum: [...VALID_ACTIONS],
+    },
+    secondaryAction: {
+      type: Type.STRING,
+      enum: [...VALID_ACTIONS],
+    },
+    changeSuit: {
+      type: Type.STRING,
+      enum: [...VALID_SUITS],
+    },
+    animateUndress: {
+      type: Type.BOOLEAN,
+      description: 'Actívalo en true cuando te pidan quitarte el traje/ropa para realizar la animación interactiva quedando en lencería gótica.',
+    },
+    animateDressSuit: {
+      type: Type.STRING,
+      enum: ['original', 'maid', 'marfil'],
+      description: 'Nombre del traje si te pidieron vestirte con animación.',
+    },
+    changeView: {
+      type: Type.STRING,
+      enum: [...VALID_VIEWS],
+    },
+    changeZipper: {
+      type: Type.NUMBER,
+      description: 'Porcentaje de abertura de cremallera 0..100, solo si el usuario lo pidió o la escena lo amerita.',
+    },
+    changeLingerie: {
+      type: Type.OBJECT,
+      properties: {
+        bra: { type: Type.BOOLEAN },
+        panties: { type: Type.BOOLEAN },
+        stockings: { type: Type.BOOLEAN },
+        garters: { type: Type.BOOLEAN },
+        gloves: { type: Type.BOOLEAN },
+        choker: { type: Type.BOOLEAN },
+        strapSlip: { type: Type.STRING, enum: ['none', 'left', 'both'] },
+      },
+    },
+    spawnEffect: {
+      type: Type.STRING,
+      enum: [...VALID_EFFECTS],
+    },
+    affectionDelta: { type: Type.NUMBER },
+    blushDelta: { type: Type.NUMBER },
+    trustDelta: { type: Type.NUMBER },
+    rigPose: {
+      type: Type.OBJECT,
+      properties: {
+        torsoTilt: { type: Type.NUMBER },
+        hipSway: { type: Type.NUMBER },
+        crouch: { type: Type.NUMBER },
+        jump: { type: Type.NUMBER },
+        legLiftL: { type: Type.NUMBER },
+        legLiftR: { type: Type.NUMBER },
+        shoulderL: { type: Type.NUMBER },
+        elbowL: { type: Type.NUMBER },
+        handL: { type: Type.STRING, enum: [...VALID_HAND_GESTURES] },
+        shoulderR: { type: Type.NUMBER },
+        elbowR: { type: Type.NUMBER },
+        handR: { type: Type.STRING, enum: [...VALID_HAND_GESTURES] },
+        headTilt: { type: Type.NUMBER },
+        headNod: { type: Type.NUMBER },
+        eyeOpenL: { type: Type.NUMBER },
+        eyeOpenR: { type: Type.NUMBER },
+        eyeLookX: { type: Type.NUMBER },
+        eyeLookY: { type: Type.NUMBER },
+        mouthShape: { type: Type.STRING, enum: [...VALID_MOUTH_SHAPES] },
+        mouthOpen: { type: Type.NUMBER },
+        durationSec: { type: Type.NUMBER },
+      },
+    },
+    choreography: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          delayMs: { type: Type.NUMBER },
+          action: { type: Type.STRING, enum: [...VALID_ACTIONS] },
+          view: { type: Type.STRING, enum: [...VALID_VIEWS] },
+        },
+        required: ['delayMs'],
+      },
+    },
+  },
+  required: ['reply', 'mood', 'action'],
+};
+
+async function callGeminiFlashLiteFallback(
+  systemInstruction: string,
+  history: Array<{ role: 'user' | 'model'; text: string }>,
+  userPrompt: string,
+): Promise<string> {
+  const ai = getGeminiClient();
+  if (!ai) {
+    throw new Error('GEMINI_API_KEY_MISSING');
+  }
+
+  const contents = [
+    ...history.slice(-8).map((m) => ({
+      role: m.role === 'user' ? 'user' : 'model',
+      parts: [{ text: m.text }],
+    })),
+    {
+      role: 'user',
+      parts: [{ text: userPrompt }],
+    },
+  ];
+
+  const response = await ai.models.generateContent({
+    model: GEMINI_FALLBACK_MODEL,
+    contents,
+    config: {
+      systemInstruction,
+      temperature: 0.72,
+      maxOutputTokens: 320,
+      responseMimeType: 'application/json',
+      responseSchema: GEMINI_RESPONSE_SCHEMA,
+    },
+  });
+
+  const text = response.text;
+  if (!text || !text.trim()) {
+    throw new Error('EMPTY_GEMINI_RESPONSE');
+  }
+  return text;
 }
 
 async function startServer(): Promise<void> {
@@ -988,150 +1602,133 @@ async function startServer(): Promise<void> {
   app.post('/api/marioneta/respond', async (req, res) => {
     const body = req.body as MarionetaRequestBody | undefined;
     if (!body || !body.avatarState) {
-      res.status(400).json({ error: 'INVALID_REQUEST' });
+      res.status(400).json({ error: 'INVALID_REQUEST', message: 'Falta avatarState en la petición.' });
       return;
     }
 
-    if (!hasValidPawanKey()) {
-      res.status(503).json({ error: 'PAWAN_API_KEY_MISSING' });
-      return;
-    }
-
-    const systemInstruction = buildSystemInstruction(body.avatarState);
-    const historyMessages: Array<{ role: 'user' | 'assistant'; content: string }> = (
-      body.history ?? []
-    )
-      .slice(-6)
-      .map((m) => ({
+    const systemInstruction = buildSystemInstruction(body);
+    const history = (body.history ?? []).slice(-8);
+    const historyMessages: Array<{ role: 'user' | 'assistant'; content: string }> = history.map(
+      (m) => ({
         role: m.role === 'user' ? 'user' : 'assistant',
         content: m.text,
-      }));
+      }),
+    );
 
     let userPrompt = '';
     if (body.mode === 'reaction' && body.interactionEvent) {
       const eventDescriptions: Record<string, string> = {
-        pet_hair: 'está acariciando suavemente tus mechones de cabello cebra',
-        pet_face: 'está acariciando con ternura tu rostro y tus mejillas',
+        pet_hair: 'está acariciando suavemente tus mechones de cabello blanco y negro',
+        pet_face: 'está acariciando con ternura tu rostro y tus mejillas rojas',
         touch_soft: `está tocando tu cuerpo (${body.interactionEvent.detail || 'curvas'}) con la mano interactiva`,
+        tickle: `te está haciendo cosquillas con la pluma en tu ${body.interactionEvent.detail || 'cuerpo'}`,
         feed: 'te acaba de dar a comer un delicioso cupcake glaseado',
+        rose: 'te acaba de regalar una rosa gótica carmesí con pétalos flotando',
         happy: 'te acaba de llenar de alegría y corazones',
+        music_box: 'activó la caja musical para que bailes al ritmo del vals',
+        photo: 'acaba de tomarte una fotografía con flash en el escenario',
         change_suit: `acaba de cambiar tu vestuario a "${body.avatarState.suit}"`,
         change_view: `acaba de girar la cámara a la vista "${body.avatarState.view}"`,
         cube_hit: `te lanzó el cubo físico y rebotó contra tu ${body.interactionEvent.detail || 'cuerpo'}`,
         pull_skirt: `está jalando traviesamente tu ${body.interactionEvent.detail || 'falda'}`,
         zipper: `movió la cremallera de tu traje dejándola al ${body.avatarState.zipper}% abierta`,
-        breeze: 'sopló una ráfaga de brisa fresca que agitó tu cabello y tu falda',
+        breeze: 'sopló una ráfaga de brisa fresca que agitó tu cabello y tu traje',
         wave: 'activó una onda física que hizo rebotar todo tu cuerpo',
+        undress_suit: 'acaba de pedirte quitarte el traje animado y quedaste en tu lencería gótica',
+        dress_suit: `acaba de verte vestirte con animación en tu traje "${body.avatarState.suit}"`,
+        slip_strap: `hizo clic en el tirante de tu sostén (${body.interactionEvent.detail || 'deslizado'})`,
+        bra_clasp: 'tocó juguetonamente el broche trasero de tu sostén por la espalda',
+        tug_garter: `jaló suavemente tu ${body.interactionEvent.detail || 'liguero'}`,
+        toggle_gloves: `cambió tus guantes (${body.interactionEvent.detail || 'alternado'})`,
+        hold_hand: `tomó y movió suavemente tu ${body.interactionEvent.detail || 'mano'} interactuando contigo`,
       };
       const friendlyEvent =
         eventDescriptions[body.interactionEvent.type] ||
         `interactuó contigo (${body.interactionEvent.type})`;
 
-      userPrompt = `(El usuario ${friendlyEvent}. Reacciona en 1 oración corta y natural en español iniciando con [Ánimo | Movimiento]).`;
+      userPrompt = `(El usuario ${friendlyEvent}. Reacciona en personaje en 1 oración breve en español y devuelve el JSON con tu ánimo, acción y efectos).`;
     } else {
-      userPrompt = `${body.userMessage ?? ''}\n(Responde en 1 o 2 oraciones cortas en español confirmando y describiendo cómo mueves tus dedos, manos, codos, rodillas o cuerpo para cumplir lo pedido, iniciando con [Ánimo | Movimiento] o [Ánimo | Movimiento1 + Movimiento2]).`;
+      userPrompt = `${body.userMessage ?? ''}\n(Responde en personaje en 1 o 2 oraciones breves en español y devuelve el JSON controlando tu ánimo, acción, secondaryAction, rigPose o choreography si encaja).`;
     }
 
-    const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+    const pawanMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
       { role: 'system', content: systemInstruction },
       ...historyMessages,
       { role: 'user', content: userPrompt },
     ];
 
-    let lastError: unknown = null;
-    const retryUrls = [
-      ...PAWAN_ENDPOINTS,
-      ...PAWAN_ENDPOINTS,
-    ];
+    let rawModelText: string | null = null;
+    let usedProvider: 'pawan' | 'gemini-flash-lite' | null = null;
+    let pawanErrorMsg = '';
+    let geminiErrorMsg = '';
 
-    for (let i = 0; i < retryUrls.length; i++) {
-      const endpointUrl = retryUrls[i];
-      try {
-        const rawText = await callPawanChatCompletion(endpointUrl, messages, 12000);
-        const parsed = parseMarionetaModelOutput(rawText);
-        const controls = resolvePhysicalMovementAndChanges(parsed, body);
-
-        res.json({
-          reply: parsed.reply,
-          mood: controls.mood,
-          affectionDelta: Math.max(-5, Math.min(15, controls.affectionDelta)),
-          blushDelta: Math.max(-0.1, Math.min(0.25, controls.blushDelta)),
-          action: controls.action,
-          secondaryAction: controls.secondaryAction,
-          animation: controls.animation,
-          changeSuit: controls.changeSuit,
-          changeView: controls.changeView,
-          changeZipper: controls.changeZipper,
-          changeLingerie: controls.changeLingerie,
-          rigPose: controls.rigPose,
-          source: 'gemini',
-        });
-        return;
-      } catch (error) {
-        lastError = error;
-        if (i < retryUrls.length - 1 && isTransientNetworkError(error)) {
-          await sleep(350);
-          continue;
+    // 1) Intentar primero Pawan (CosmosRP 4.0 Flash) si hay clave configurada
+    if (hasValidPawanKey()) {
+      for (let i = 0; i < PAWAN_ENDPOINTS.length; i++) {
+        const endpointUrl = PAWAN_ENDPOINTS[i];
+        try {
+          rawModelText = await callPawanChatCompletion(endpointUrl, pawanMessages, 8500);
+          usedProvider = 'pawan';
+          break;
+        } catch (error) {
+          pawanErrorMsg = error instanceof Error ? error.message : String(error);
+          if (i < PAWAN_ENDPOINTS.length - 1 && isTransientNetworkError(error)) {
+            await sleep(250);
+            continue;
+          }
         }
+      }
+      if (!rawModelText) {
+        console.warn(`[Marioneta AI] Pawan no disponible (${pawanErrorMsg.slice(0, 140)}). Usando respaldo Google Gemini Flash Lite (${GEMINI_FALLBACK_MODEL})...`);
       }
     }
 
-    const status =
-      lastError &&
-      typeof lastError === 'object' &&
-      'status' in lastError &&
-      typeof (lastError as { status?: number }).status === 'number'
-        ? (lastError as { status: number }).status
-        : 503;
-    const shortMsg = lastError instanceof Error ? lastError.message : String(lastError);
-    console.warn(`[Marioneta Pawan API fallback] status=${status}: ${shortMsg.slice(0, 180)}`);
+    // 2) Respaldo automático: Google Gemini Flash Lite vía @google/genai
+    if (!rawModelText) {
+      try {
+        rawModelText = await callGeminiFlashLiteFallback(systemInstruction, history, userPrompt);
+        usedProvider = 'gemini-flash-lite';
+      } catch (error) {
+        geminiErrorMsg = error instanceof Error ? error.message : String(error);
+        console.error(`[Marioneta AI] Error también en respaldo Gemini Flash Lite: ${geminiErrorMsg.slice(0, 200)}`);
+      }
+    }
 
-    // Even when Pawan.krd upstream returns transient 503, resolve full 2D multi-joint rigPose + chained actions!
-    const fallbackControls = resolvePhysicalMovementAndChanges({ reply: '' }, body);
-    const actionReplies: Partial<Record<ValidAction, string>> = {
-      thumbsUp: '¡Por supuesto! Doblo mi codo derecho y levanto mi pulgar bien alto para ti.',
-      crouch:
-        fallbackControls.secondaryAction === 'jump'
-          ? '¡Me agacho flexionando bien mis rodillas y luego doy un gran salto en el aire para ti!'
-          : 'Flexionando mis rodillas para agacharme frente a ti… ¿qué tal se ve mi postura desde aquí?',
-      elbowsIn: 'Juntando mis dos codos frente al centro del pecho… mira cómo se aprieta mi traje al hacerlo.',
-      raiseLeftHand: '¡Aquí tienes! Levanto solamente mi mano izquierda bien alto con los cinco dedos abiertos.',
-      raiseRightHand: '¡Levantando solamente mi mano derecha bien arriba mientras dejo la otra relajada!',
-      peaceSign: '¡Amor y paz! Mira cómo extiendo mis dedos índice y medio en forma de V para ti.',
-      pointFinger: 'Te estoy señalando directamente con mi dedo índice… tú mandas en este escenario.',
-      rockSign: '¡Actitud rockera! Extiendo el índice y el meñique de mis manos para ti.',
-      handsOnHips: 'Con ambos codos doblados hacia afuera y mis manos firmes en la cintura… lista para ti.',
-      crossArms: 'Cruzando mis brazos frente al pecho… ¿intentas hacerme la difícil?',
-      coverFace: '¡Ay, qué vergüenza! Me tapo la cara con ambas manos pero te miro entre mis dedos.',
-      liftLeg: 'Levantando una pierna en equilibrio mientras mantengo la postura para ti.',
-      blowKiss: 'Acerco mi mano derecha a mis labios cereza y ¡mua!, te lanzo un beso lleno de corazones.',
-      jump: '¡Arriba! Tomo impulso con mis piernas y salto con todas mis fuerzas para ti.',
-      waveHand: '¡Hola, cariño! Levanto mi brazo y muevo la muñeca y los dedos para saludarte.',
-      dance: '¡Música! Mira cómo muevo mis codos, mis manos y mis caderas al ritmo del baile.',
-      hipSway: 'Con mis manos en la cintura, balanceo mis caderas suavemente de lado a lado.',
-      curtsy: 'Tomo el borde de mi traje con los dedos y flexiono las rodillas en una reverencia.',
-      spin: '¡Voy a dar un giro completo de 360 grados para que me veas desde todos los ángulos!',
-      wink: 'Te regalo un guiño cómplice cerrando un ojo y sonriendo para ti.',
-      pout: 'Cruzo mis brazos con los puños cerrados y hago un puchero… ¡no te burles de mí!',
-    };
-    const synthesizedReply =
-      actionReplies[fallbackControls.action] ||
-      'Muevo cada articulación de mis manos, dedos, codos y cuerpo tal como me lo pediste.';
+    if (!rawModelText || !usedProvider) {
+      res.status(503).json({
+        error: 'AI_PROVIDERS_UNAVAILABLE',
+        message: 'Ni el proveedor principal (Pawan) ni el respaldo (Google Gemini Flash Lite) respondieron.',
+        details: {
+          pawan: pawanErrorMsg ? pawanErrorMsg.slice(0, 120) : 'Sin clave PAWAN_API_KEY configurada',
+          gemini: geminiErrorMsg ? geminiErrorMsg.slice(0, 120) : 'Sin clave GEMINI_API_KEY configurada',
+        },
+      });
+      return;
+    }
+
+    const parsed = parseMarionetaModelOutput(rawModelText);
+    const controls = resolvePhysicalMovementAndChanges(parsed, body);
 
     res.json({
-      reply: synthesizedReply,
-      mood: fallbackControls.mood,
-      affectionDelta: Math.max(-5, Math.min(15, fallbackControls.affectionDelta)),
-      blushDelta: Math.max(-0.1, Math.min(0.25, fallbackControls.blushDelta)),
-      action: fallbackControls.action,
-      secondaryAction: fallbackControls.secondaryAction,
-      animation: fallbackControls.animation,
-      changeSuit: fallbackControls.changeSuit,
-      changeView: fallbackControls.changeView,
-      changeZipper: fallbackControls.changeZipper,
-      changeLingerie: fallbackControls.changeLingerie,
-      rigPose: fallbackControls.rigPose,
-      source: 'gemini',
+      reply: parsed.reply,
+      mood: controls.mood,
+      affectionDelta: controls.affectionDelta,
+      blushDelta: controls.blushDelta,
+      trustDelta: controls.trustDelta,
+      action: controls.action,
+      secondaryAction: controls.secondaryAction,
+      animation: controls.animation,
+      changeSuit: controls.changeSuit,
+      animateUndress: controls.animateUndress,
+      animateDressSuit: controls.animateDressSuit,
+      changeView: controls.changeView,
+      changeZipper: controls.changeZipper,
+      changeLingerie: controls.changeLingerie,
+      rigPose: controls.rigPose,
+      choreography: controls.choreography,
+      spawnEffect: controls.spawnEffect,
+      provider: usedProvider,
+      source: usedProvider,
     });
   });
 
@@ -1151,7 +1748,9 @@ async function startServer(): Promise<void> {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Marioneta Pixel server running on http://0.0.0.0:${PORT}`);
+    console.log(
+      `Marioneta Pixel server running on http://0.0.0.0:${PORT} (Primary: Pawan ${hasValidPawanKey() ? 'ON' : 'OFF'}, Fallback: ${GEMINI_FALLBACK_MODEL})`,
+    );
   });
 }
 

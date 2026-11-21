@@ -1,6 +1,15 @@
+import type { StageThemeId } from '../types/persona';
+
 export type AvatarView = 'front' | 'side' | 'back';
 export type AvatarSuit = 'original' | 'maid' | 'marfil' | 'none';
-export type AvatarMood = 'Tranquila' | 'Feliz' | 'Sorprendida' | 'Ruborizada' | 'Mimada';
+export type AvatarMood =
+  | 'Tranquila'
+  | 'Feliz'
+  | 'Sorprendida'
+  | 'Ruborizada'
+  | 'Mimada'
+  | 'Traviesa'
+  | 'Juguetona';
 export type HandGesture =
   | 'open'
   | 'thumbs_up'
@@ -9,7 +18,8 @@ export type HandGesture =
   | 'fist'
   | 'kiss_hand'
   | 'wave_spread'
-  | 'rock';
+  | 'rock'
+  | 'heart_pinch';
 
 export type MouthShape = 'neutral' | 'smile' | 'open' | 'kiss' | 'pout' | 'talk';
 
@@ -47,6 +57,13 @@ export interface AvatarRigPose {
   mouthShape?: MouthShape;
   mouthOpen?: number;
   durationSec?: number;
+}
+
+export interface ChoreographyBeat {
+  delayMs: number;
+  action?: AvatarAction;
+  rigPose?: AvatarRigPose;
+  view?: AvatarView;
 }
 
 export type AvatarAnimation =
@@ -87,7 +104,14 @@ export type AvatarAnimation =
   | 'hands_on_hips'
   | 'cross_arms'
   | 'cover_face'
-  | 'lift_leg';
+  | 'lift_leg'
+  | 'heart_hands'
+  | 'salute'
+  | 'cat_paws'
+  | 'tickled'
+  | 'shy_fingers'
+  | 'music_sway'
+  | 'rose_blush';
 
 export type AvatarAction =
   | 'bounceBust'
@@ -128,7 +152,23 @@ export type AvatarAction =
   | 'handsOnHips'
   | 'crossArms'
   | 'coverFace'
-  | 'liftLeg';
+  | 'liftLeg'
+  | 'heartHands'
+  | 'salute'
+  | 'catPaws'
+  | 'tickle'
+  | 'shyFingers'
+  | 'giveRose'
+  | 'photoPose'
+  | 'undressSuit'
+  | 'dressSuit'
+  | 'slipStrap'
+  | 'toggleGloves'
+  | 'toggleStockings'
+  | 'toggleGarters'
+  | 'toggleChoker';
+
+export type StrapSlipState = 'none' | 'left' | 'both';
 
 export type InteractionEventType =
   | 'pet_hair'
@@ -142,7 +182,18 @@ export type InteractionEventType =
   | 'pull_skirt'
   | 'zipper'
   | 'breeze'
-  | 'wave';
+  | 'wave'
+  | 'tickle'
+  | 'rose'
+  | 'music_box'
+  | 'photo'
+  | 'undress_suit'
+  | 'dress_suit'
+  | 'slip_strap'
+  | 'bra_clasp'
+  | 'tug_garter'
+  | 'toggle_gloves'
+  | 'hold_hand';
 
 export interface InteractionEvent {
   type: InteractionEventType;
@@ -154,13 +205,19 @@ export interface LingerieState {
   bra: boolean;
   panties: boolean;
   stockings: boolean;
+  garters: boolean;
+  gloves: boolean;
+  choker: boolean;
+  strapSlip: StrapSlipState;
 }
 
 export interface ToolsState {
   handEnabled: boolean;
+  featherEnabled: boolean;
   cubeEnabled: boolean;
   pullFabric: boolean;
   animationsEnabled: boolean;
+  musicBoxEnabled: boolean;
 }
 
 export interface AIReactionPayload {
@@ -171,10 +228,14 @@ export interface AIReactionPayload {
   secondaryAction?: AvatarAction | 'none';
   animation?: AvatarAnimation;
   changeSuit?: AvatarSuit;
+  animateUndress?: boolean;
+  animateDressSuit?: AvatarSuit;
   changeView?: AvatarView;
   changeZipper?: number;
   changeLingerie?: Partial<LingerieState>;
   rigPose?: AvatarRigPose;
+  choreography?: ChoreographyBeat[];
+  spawnEffect?: 'hearts' | 'stars' | 'notes' | 'petals' | 'none';
 }
 
 export interface AvatarSnapshot {
@@ -186,10 +247,18 @@ export interface AvatarSnapshot {
   bra: boolean;
   panties: boolean;
   stockings: boolean;
+  garters: boolean;
+  gloves: boolean;
+  choker: boolean;
+  strapSlip: StrapSlipState;
+  isChangingClothes: boolean;
   handEnabled: boolean;
+  featherEnabled: boolean;
   cubeEnabled: boolean;
   pullFabric: boolean;
   animationsEnabled: boolean;
+  musicBoxEnabled: boolean;
+  stageTheme: StageThemeId;
   currentAnimation: AvatarAnimation;
   mood: AvatarMood;
   affection: number;
@@ -198,6 +267,7 @@ export interface AvatarSnapshot {
   hintDismissed: boolean;
   lastInteractionEvent: InteractionEvent | null;
   activeRigPose?: AvatarRigPose | null;
+  manualRigActive?: boolean;
 }
 
 export interface PixelAvatarCallbacks {
@@ -208,12 +278,20 @@ export interface PixelAvatarCallbacks {
 export interface PixelAvatarEngine {
   setView: (view: AvatarView, fromAI?: boolean) => void;
   setSuit: (suit: AvatarSuit, fromAI?: boolean) => void;
+  animateUndressSuit: (fromAI?: boolean) => void;
+  animateDressSuit: (suit?: AvatarSuit, fromAI?: boolean) => void;
   setZipper: (percent: number) => void;
   setLingerie: (partial: Partial<LingerieState>) => void;
   setTools: (partial: Partial<ToolsState>) => void;
+  setStageTheme: (theme: StageThemeId) => void;
+  setExpressiveness: (scale: number) => void;
+  setSensitivity: (scale: number) => void;
   triggerAction: (action: AvatarAction, fromAI?: boolean) => void;
   triggerAnimation: (anim: AvatarAnimation, durationSec?: number) => void;
   setCustomRigPose: (rigPose: AvatarRigPose | null) => void;
+  setManualRigPose: (rigPose: AvatarRigPose | null) => void;
+  triggerCameraFlash: () => void;
+  captureSnapshotPng: () => string | null;
   applyAIReaction: (reaction: AIReactionPayload) => void;
   getSnapshot: () => AvatarSnapshot;
   destroy: () => void;
@@ -226,21 +304,21 @@ const CX = 140;
 const SX = 140;
 
 export const SKEL = {
-  hairCrownTopY: 4, headTopY: 39, headCenterY: 61.5, headRx: 23.5, headRy: 21.5,
-  eyeY: 59.0, eyeOffX: 10.2, cheekY: 69.5, mouthY: 72.2, chinY: 83.5,
-  neckTopY: 81.5, neckMidY: 86.5, neckBotY: 92.5, neckHalfW: 10.8,
-  shoulderY: 92.0, shoulderX: 35.5, bicepBandY: 107.0,
-  elbowY: 142.0, elbowX: 63.5, wristBandY: 167.0, wristY: 176.0, wristX: 81.5, palmY: 188.0, palmX: 88.5,
-  bustTopY: 96.0, bustCenterY: 136.5, bustBotY: 172.5, bustCenterX: 27.5, bustRx: 32.8, bustRy: 36.2,
-  waistY: 175.5, waistHalfW: 22.5, waistBandTopY: 171.5, waistBandBotY: 192.5,
-  hipTopY: 183.0, hipPeakY: 207.5, hipHalfW: 58.2,
-  gluteCenterY: 206.5, gluteCenterX: 28.8, gluteRx: 33.4, gluteRy: 32.8,
-  crotchY: 213.5, thighBandY: 220.5, thighBandH: 16.0,
-  kneeY: 278.0, kneeCenterX: 18.5, kneeOuterX: 29.5, kneeInnerX: 5.5,
-  calfPeakY: 305.0, calfOuterX: 33.0, calfInnerX: 4.5,
-  ankleBandY: 341.0, ankleOuterX: 17.0, ankleInnerX: 8.5, footTipY: 359.0, footCenterX: 12.8,
-  sideBustX: SX - 44.0, sideBustY: 134.5, sideBustRx: 35.5, sideBustRy: 36.5,
-  sideGluteX: SX + 25.0, sideGluteY: 197.5, sideGluteRx: 32.8, sideGluteRy: 31.8,
+  hairCrownTopY: 8, headTopY: 42, headCenterY: 64.0, headRx: 24.0, headRy: 21.8,
+  eyeY: 61.5, eyeOffX: 10.4, cheekY: 71.5, mouthY: 73.5, chinY: 85.2,
+  neckTopY: 83.2, neckMidY: 88.0, neckBotY: 94.0, neckHalfW: 11.2,
+  shoulderY: 93.5, shoulderX: 38.2, bicepBandY: 108.5,
+  elbowY: 143.0, elbowX: 66.5, wristBandY: 168.0, wristY: 177.0, wristX: 84.0, palmY: 188.5, palmX: 90.0,
+  bustTopY: 96.5, bustCenterY: 136.5, bustBotY: 173.5, bustCenterX: 27.6, bustRx: 34.4, bustRy: 37.0,
+  waistY: 175.5, waistHalfW: 28.4, waistBandTopY: 171.0, waistBandBotY: 192.0,
+  hipTopY: 182.0, hipPeakY: 208.0, hipHalfW: 59.5,
+  gluteCenterY: 202.0, gluteCenterX: 28.4, gluteRx: 32.4, gluteRy: 30.2,
+  crotchY: 216.0, thighBandY: 223.5, thighBandH: 15.5,
+  kneeY: 279.0, kneeCenterX: 18.0, kneeOuterX: 28.6, kneeInnerX: 4.8,
+  calfPeakY: 306.0, calfOuterX: 33.0, calfInnerX: 4.4,
+  ankleBandY: 342.0, ankleOuterX: 16.8, ankleInnerX: 8.2, footTipY: 359.0, footCenterX: 12.6,
+  sideBustX: SX - 46.0, sideBustY: 135.5, sideBustRx: 37.2, sideBustRy: 37.2,
+  sideGluteX: SX + 27.0, sideGluteY: 198.5, sideGluteRx: 35.4, sideGluteRy: 32.8,
 } as const;
 
 const IS_LE = (() => {
@@ -280,8 +358,8 @@ const bayer = (x: number, y: number): number => BAYER4[((y & 3) << 2) | (x & 3)]
 export const PAL = {
   outline: packRGBA(10, 10, 17), outlineSoft: packRGBA(30, 28, 44),
   skinDeep: packRGBA(182, 181, 210), skinMid: packRGBA(218, 218, 238), skinBase: packRGBA(246, 246, 255), skinHi: packRGBA(255, 255, 255),
-  latexDeep: packRGBA(9, 9, 15), latexDark: packRGBA(15, 15, 24), latexBase: packRGBA(22, 22, 34), latexMid: packRGBA(36, 37, 54),
-  latexRim: packRGBA(64, 66, 92), latexSpec1: packRGBA(68, 72, 98), latexSpec2: packRGBA(112, 118, 148), latexSpec3: packRGBA(178, 184, 214),
+  latexDeep: packRGBA(8, 8, 14), latexDark: packRGBA(14, 14, 22), latexBase: packRGBA(22, 22, 34), latexMid: packRGBA(38, 39, 56),
+  latexRim: packRGBA(68, 70, 96), latexSpec1: packRGBA(78, 82, 108), latexSpec2: packRGBA(134, 140, 168), latexSpec3: packRGBA(198, 204, 228), latexSpec4: packRGBA(238, 240, 252),
   ivoryDeep: packRGBA(148, 139, 126), ivoryMid: packRGBA(196, 187, 172), ivoryBase: packRGBA(236, 230, 218), ivoryHi: packRGBA(255, 253, 248),
   silkSheen: packRGBA(255, 246, 226), champagne: packRGBA(218, 204, 180),
   velvetDeep: packRGBA(16, 14, 26), velvetBase: packRGBA(32, 28, 48), velvetMid: packRGBA(52, 46, 74), velvetRim: packRGBA(82, 72, 114),
@@ -290,9 +368,10 @@ export const PAL = {
   hairBlack: packRGBA(11, 10, 18), hairBlackHi: packRGBA(32, 31, 46), claw: packRGBA(11, 10, 20), clawHi: packRGBA(72, 70, 114),
   silverDark: packRGBA(74, 78, 102), silverMid: packRGBA(158, 164, 194), silverHi: packRGBA(242, 245, 255),
   goldDark: packRGBA(146, 108, 42), goldMid: packRGBA(216, 176, 92), goldHi: packRGBA(255, 240, 176),
-  lidBase: packRGBA(156, 104, 244), lidShadow: packRGBA(112, 66, 198), lidHi: packRGBA(206, 172, 255),
-  tear: packRGBA(138, 86, 228), tearDark: packRGBA(98, 54, 184), cheek: packRGBA(228, 26, 62), cheekSoft: packRGBA(250, 114, 142),
-  lipBase: packRGBA(224, 34, 74), lipDark: packRGBA(138, 18, 46), lipHi: packRGBA(255, 172, 194),
+  lidBase: packRGBA(162, 106, 248), lidShadow: packRGBA(112, 66, 202), lidHi: packRGBA(212, 178, 255),
+  tear: packRGBA(142, 86, 232), tearDark: packRGBA(98, 54, 188), cheek: packRGBA(232, 24, 62), cheekSoft: packRGBA(252, 114, 142),
+  lipBase: packRGBA(228, 44, 88), lipDark: packRGBA(138, 18, 48), lipHi: packRGBA(255, 184, 204),
+  rosePetal: packRGBA(224, 24, 68), roseStem: packRGBA(64, 166, 116),
 } as const;
 
 export interface SuitMaterialConfig {
@@ -370,7 +449,7 @@ interface Particle {
   vx: number;
   vy: number;
   life: number;
-  type: 'heart' | 'star' | 'crumb';
+  type: 'heart' | 'star' | 'crumb' | 'note' | 'petal';
 }
 
 interface PoseState {
@@ -516,14 +595,15 @@ function shadeMaterial3D(
     return diff + d > 0.66 ? PAL.velvetMid : PAL.velvetBase;
   }
 
-  // Deep satin latex matching the 3D avatar (broad sleek sheen, zero target rings!)
-  if (spec + d * 0.65 > 0.62) return PAL.latexSpec3;
-  if (spec + d * 0.80 > 0.40) return PAL.latexSpec2;
-  if (spec + d > 0.22) return PAL.latexSpec1;
-  if (rim + d > 0.48) return PAL.latexRim;
-  if (diff + d > 0.68) return PAL.latexMid;
-  if (diff + d > 0.36) return PAL.latexBase;
-  return diff + d > 0.17 ? PAL.latexDark : PAL.latexDeep;
+  // Deep glossy studio latex matching the 3D avatar (bright sculpted specular sheen!)
+  if (spec + d * 0.55 > 0.72) return PAL.latexSpec4;
+  if (spec + d * 0.65 > 0.52) return PAL.latexSpec3;
+  if (spec + d * 0.75 > 0.34) return PAL.latexSpec2;
+  if (spec + d > 0.19) return PAL.latexSpec1;
+  if (rim + d > 0.46) return PAL.latexRim;
+  if (diff + d > 0.66) return PAL.latexMid;
+  if (diff + d > 0.34) return PAL.latexBase;
+  return diff + d > 0.16 ? PAL.latexDark : PAL.latexDeep;
 }
 
 function applyOutline(buf: Uint32Array, outlineCol: number, x0 = 1, y0 = 1, x1 = W - 2, y1 = H - 2): void {
@@ -552,17 +632,17 @@ function traceSharpCurvedX(c: CanvasRenderingContext2D, cx: number, cy: number, 
   traceTaperedArc(c, cx + rx, cy - ry, cx + bendX, cy + bendY, cx - rx, cy + ry, halfThick);
 }
 
-// ---- TRAZADORES ANATÓMICOS BÉZIER (REFINADOS AL 3D) ----
+// ---- TRAZADORES ANATÓMICOS BÉZIER (REFINADOS AL 3D BASE) ----
 function traceTorsoAndLegsFrontBack(c: CanvasRenderingContext2D): void {
   const S = SKEL;
   c.beginPath();
   c.moveTo(CX - S.neckHalfW, S.neckTopY); c.lineTo(CX - S.neckHalfW - 0.8, S.neckBotY - 1);
-  c.bezierCurveTo(CX - 22, S.neckBotY + 1, CX - 32, S.shoulderY, CX - S.shoulderX, S.shoulderY + 5);
-  // Sculpted hourglass waist taper matching 3D front & back
-  c.bezierCurveTo(CX - 34, S.bustCenterY - 6, CX - 25, S.waistY - 14, CX - S.waistHalfW, S.waistY);
-  c.bezierCurveTo(CX - 32, S.waistY + 6, CX - S.hipHalfW, S.hipTopY + 9, CX - S.hipHalfW, S.hipPeakY);
-  c.bezierCurveTo(CX - S.hipHalfW, S.thighBandY + 18, CX - 41, S.kneeY - 24, CX - S.kneeOuterX, S.kneeY);
-  c.bezierCurveTo(CX - 31, S.kneeY + 12, CX - S.calfOuterX, S.calfPeakY - 12, CX - S.calfOuterX, S.calfPeakY);
+  c.bezierCurveTo(CX - 23, S.neckBotY + 1, CX - 34, S.shoulderY, CX - S.shoulderX, S.shoulderY + 5);
+  // Natural, balanced hourglass ribcage-to-waist taper matching the 3D base front & back
+  c.bezierCurveTo(CX - 37.5, S.bustCenterY - 8, CX - 31.2, S.waistY - 14, CX - S.waistHalfW, S.waistY);
+  c.bezierCurveTo(CX - 37.5, S.waistY + 5.5, CX - S.hipHalfW, S.hipTopY + 7.5, CX - S.hipHalfW, S.hipPeakY);
+  c.bezierCurveTo(CX - S.hipHalfW, S.thighBandY + 20, CX - 42, S.kneeY - 24, CX - S.kneeOuterX, S.kneeY);
+  c.bezierCurveTo(CX - 31.5, S.kneeY + 12, CX - S.calfOuterX, S.calfPeakY - 12, CX - S.calfOuterX, S.calfPeakY);
   c.bezierCurveTo(CX - 32, S.calfPeakY + 16, CX - 21, S.ankleBandY - 8, CX - S.ankleOuterX, S.ankleBandY);
   c.quadraticCurveTo(CX - 15.5, S.footTipY - 6, CX - S.footCenterX, S.footTipY);
   c.quadraticCurveTo(CX - 10, S.footTipY - 6, CX - S.ankleInnerX, S.ankleBandY);
@@ -574,11 +654,11 @@ function traceTorsoAndLegsFrontBack(c: CanvasRenderingContext2D): void {
   c.quadraticCurveTo(CX + 10, S.footTipY - 6, CX + S.footCenterX, S.footTipY);
   c.quadraticCurveTo(CX + 15.5, S.footTipY - 6, CX + S.ankleOuterX, S.ankleBandY);
   c.bezierCurveTo(CX + 21, S.ankleBandY - 8, CX + 32, S.calfPeakY + 16, CX + S.calfOuterX, S.calfPeakY);
-  c.bezierCurveTo(CX + S.calfOuterX, S.calfPeakY - 12, CX + 31, S.kneeY + 12, CX + S.kneeOuterX, S.kneeY);
-  c.bezierCurveTo(CX + 41, S.kneeY - 24, CX + S.hipHalfW, S.thighBandY + 18, CX + S.hipHalfW, S.hipPeakY);
-  c.bezierCurveTo(CX + S.hipHalfW, S.hipTopY + 9, CX + 32, S.waistY + 6, CX + S.waistHalfW, S.waistY);
-  c.bezierCurveTo(CX + 25, S.waistY - 14, CX + 34, S.bustCenterY - 6, CX + S.shoulderX, S.shoulderY + 5);
-  c.bezierCurveTo(CX + 32, S.shoulderY, CX + 22, S.neckBotY + 1, CX + S.neckHalfW + 0.8, S.neckBotY - 1);
+  c.bezierCurveTo(CX + S.calfOuterX, S.calfPeakY - 12, CX + 31.5, S.kneeY + 12, CX + S.kneeOuterX, S.kneeY);
+  c.bezierCurveTo(CX + 42, S.kneeY - 24, CX + S.hipHalfW, S.thighBandY + 20, CX + S.hipHalfW, S.hipPeakY);
+  c.bezierCurveTo(CX + S.hipHalfW, S.hipTopY + 7.5, CX + 37.5, S.waistY + 5.5, CX + S.waistHalfW, S.waistY);
+  c.bezierCurveTo(CX + 31.2, S.waistY - 14, CX + 37.5, S.bustCenterY - 8, CX + S.shoulderX, S.shoulderY + 5);
+  c.bezierCurveTo(CX + 34, S.shoulderY, CX + 23, S.neckBotY + 1, CX + S.neckHalfW + 0.8, S.neckBotY - 1);
   c.lineTo(CX + S.neckHalfW, S.neckTopY); c.closePath(); c.fill();
 }
 
@@ -631,26 +711,43 @@ function traceGlutesBackBezier(c: CanvasRenderingContext2D): void {
   const S = SKEL;
   for (const s of [-1, 1]) {
     const gx = CX + s * S.gluteCenterX, gy = S.gluteCenterY, rx = S.gluteRx, ry = S.gluteRy;
-    c.beginPath(); c.moveTo(CX - s * 0.5, gy - ry * 0.82);
-    c.bezierCurveTo(gx + s * rx * 0.35, gy - ry * 1.08, gx + s * rx * 1.05, gy - ry * 0.64, gx + s * rx * 1.04, gy + ry * 0.16);
-    c.bezierCurveTo(gx + s * rx * 0.98, gy + ry * 0.98, gx - s * rx * 0.08, gy + ry * 1.08, CX + s * 0.8, gy + ry * 0.70);
-    c.lineTo(CX - s * 0.5, gy + ry * 0.62); c.closePath(); c.fill();
+    // Plump high spherical 3D glutes with crisp wide rounded under-glute shelf & tight inner cleft
+    c.beginPath();
+    c.moveTo(CX - s * 0.4, gy - ry * 0.84);
+    c.bezierCurveTo(
+      gx + s * rx * 0.28, gy - ry * 1.08,
+      gx + s * rx * 1.03, gy - ry * 0.72,
+      gx + s * rx * 1.05, gy + ry * 0.10,
+    );
+    c.bezierCurveTo(
+      gx + s * rx * 1.02, gy + ry * 0.88,
+      gx + s * rx * 0.36, gy + ry * 1.06,
+      gx - s * rx * 0.24, gy + ry * 0.98,
+    );
+    c.quadraticCurveTo(CX + s * 4.5, gy + ry * 0.88, CX + s * 0.6, gy + ry * 0.62);
+    c.lineTo(CX - s * 0.4, gy + ry * 0.54);
+    c.closePath();
+    c.fill();
   }
 }
 
 function traceTorsoAndLegsSide(c: CanvasRenderingContext2D): void {
+  // Refined 3D side-profile S-curve with fuller natural waist span, soft tummy, and lush rear curve
   c.beginPath(); c.moveTo(SX - 10, 78); c.lineTo(SX - 12, 92);
-  c.bezierCurveTo(SX - 22, 114, SX - 24, 148, SX - 22, 174);
-  c.bezierCurveTo(SX - 26, 192, SX - 30, 224, SX - 26, 250);
-  c.bezierCurveTo(SX - 24, 266, SX - 22, 274, SX - 22, 281);
-  c.bezierCurveTo(SX - 20, 298, SX - 15, 326, SX - 10, 344);
+  c.bezierCurveTo(SX - 23, 114, SX - 25, 148, SX - 25, 166);
+  // Soft rounded lower belly curve matching 3D side reference
+  c.bezierCurveTo(SX - 32, 173, SX - 32, 185, SX - 25, 194);
+  c.bezierCurveTo(SX - 30, 210, SX - 32, 232, SX - 27, 254);
+  c.bezierCurveTo(SX - 24, 268, SX - 21, 275, SX - 21, 281);
+  c.bezierCurveTo(SX - 19, 298, SX - 15, 326, SX - 10, 344);
   c.lineTo(SX - 6, 359); c.lineTo(SX + 11, 359); c.lineTo(SX + 14, 344);
   c.bezierCurveTo(SX + 22, 330, SX + 29, 314, SX + 28, 300);
-  c.bezierCurveTo(SX + 27, 286, SX + 14, 278, SX + 7, 274);
-  c.bezierCurveTo(SX + 14, 260, SX + 32, 244, SX + 36, 224);
-  c.bezierCurveTo(SX + 34, 200, SX + 24, 178, SX + 16, 162);
-  c.bezierCurveTo(SX + 13, 144, SX + 20, 116, SX + 17, 94);
-  c.quadraticCurveTo(SX + 14, 84, SX + 10, 78); c.closePath(); c.fill();
+  c.bezierCurveTo(SX + 27, 286, SX + 14, 278, SX + 7, 273);
+  c.bezierCurveTo(SX + 16, 260, SX + 34, 244, SX + 38, 224);
+  c.bezierCurveTo(SX + 36, 200, SX + 26, 178, SX + 16, 162);
+  // Natural healthy arched lower back curving smoothly to upper back
+  c.bezierCurveTo(SX + 11.5, 144, SX + 20, 116, SX + 18, 94);
+  c.quadraticCurveTo(SX + 15, 84, SX + 10, 78); c.closePath(); c.fill();
 }
 
 function traceHeadSide(c: CanvasRenderingContext2D): void {
@@ -659,16 +756,16 @@ function traceHeadSide(c: CanvasRenderingContext2D): void {
 
 function traceBustSide(c: CanvasRenderingContext2D): void {
   c.beginPath(); c.moveTo(SX - 10, 96);
-  c.bezierCurveTo(SX - 44, 96, SX - 81, 116, SX - 80, 140);
-  c.bezierCurveTo(SX - 79, 165, SX - 52, 176, SX - 24, 170);
-  c.bezierCurveTo(SX - 12, 167, SX - 8, 152, SX - 8, 134); c.closePath(); c.fill();
+  c.bezierCurveTo(SX - 46, 95, SX - 83, 116, SX - 82, 141);
+  c.bezierCurveTo(SX - 80, 166, SX - 52, 177, SX - 23, 170);
+  c.bezierCurveTo(SX - 11, 167, SX - 7, 152, SX - 7, 134); c.closePath(); c.fill();
 }
 
 function traceGlutesSide(c: CanvasRenderingContext2D): void {
-  c.beginPath(); c.moveTo(SX + 12, 164);
-  c.bezierCurveTo(SX + 38, 164, SX + 58, 179, SX + 57, 200);
-  c.bezierCurveTo(SX + 56, 221, SX + 38, 234, SX + 16, 228);
-  c.bezierCurveTo(SX + 4, 225, SX + 2, 206, SX + 4, 184); c.closePath(); c.fill();
+  c.beginPath(); c.moveTo(SX + 13, 164);
+  c.bezierCurveTo(SX + 42, 163, SX + 62, 180, SX + 60, 202);
+  c.bezierCurveTo(SX + 57, 222, SX + 39, 234, SX + 17, 228);
+  c.bezierCurveTo(SX + 5, 224, SX + 3, 206, SX + 6, 184); c.closePath(); c.fill();
 }
 
 function traceFrontArmSide(c: CanvasRenderingContext2D): void {
@@ -706,6 +803,11 @@ const ZONE_NAMES: Record<number, string> = {
   9: 'Cuerpo',
   10: 'Tela Libre',
   11: 'Cremallera (Arrastra)',
+  12: 'Tirante (Clic: Bajar/Subir)',
+  13: 'Broche Trasero (Clic)',
+  14: 'Liguero / Media (Clic)',
+  15: 'Brazo / Mano Izq. (Arrastra)',
+  16: 'Brazo / Mano Der. (Arrastra)',
 };
 
 const SPRING_ZONE_MAP: Record<number, SpringName> = {
@@ -765,16 +867,27 @@ export function createPixelAvatarEngine(
     bra: boolean;
     panties: boolean;
     stockings: boolean;
+    garters: boolean;
+    gloves: boolean;
+    choker: boolean;
+    strapSlip: StrapSlipState;
+    isChangingClothes: boolean;
     handEnabled: boolean;
+    featherEnabled: boolean;
     cubeEnabled: boolean;
     pullFabric: boolean;
     animationsEnabled: boolean;
+    musicBoxEnabled: boolean;
+    stageTheme: StageThemeId;
+    expressiveness: number;
+    sensitivity: number;
     currentAnim: AvatarAnimation;
     animTime: number;
     animDuration: number;
     customRigPose: AvatarRigPose | null;
     customRigTime: number;
     customRigDuration: number;
+    manualRigPose: AvatarRigPose | null;
     affection: number;
     blush: number;
     mood: AvatarMood;
@@ -782,13 +895,21 @@ export function createPixelAvatarEngine(
     blinkTimer: number;
     blinkPhase: number;
     eatAnim: { t: number } | null;
+    roseAnim: { t: number } | null;
+    flashAlpha: number;
+    musicNoteTimer: number;
     time: number;
   } = {
     view: 'front', suit: 'original', zipper: 0, bra: true, panties: true, stockings: true,
-    handEnabled: true, cubeEnabled: false, pullFabric: false, animationsEnabled: true,
+    garters: true, gloves: true, choker: false, strapSlip: 'none', isChangingClothes: false,
+    handEnabled: true, featherEnabled: false, cubeEnabled: false, pullFabric: false,
+    animationsEnabled: true, musicBoxEnabled: false, stageTheme: 'gothic',
+    expressiveness: 1.0, sensitivity: 1.0,
     currentAnim: 'idle', animTime: 0, animDuration: 0,
     customRigPose: null, customRigTime: 0, customRigDuration: 0,
-    affection: 74, blush: .15, mood: 'Tranquila', moodTimer: 0, blinkTimer: 2.8, blinkPhase: 0, eatAnim: null, time: 0,
+    manualRigPose: null,
+    affection: 74, blush: .15, mood: 'Tranquila', moodTimer: 0, blinkTimer: 2.8, blinkPhase: 0,
+    eatAnim: null, roseAnim: null, flashAlpha: 0, musicNoteTimer: 0, time: 0,
   };
 
   let currentFps = 60;
@@ -801,6 +922,7 @@ export function createPixelAvatarEngine(
   let destroyed = false;
   let rafId = 0;
   const pendingTimeouts = new Set<number>();
+  const choreoTimeouts = new Set<number>();
 
   const scheduleTimeout = (fn: () => void, ms: number): void => {
     const id = window.setTimeout(() => {
@@ -808,6 +930,19 @@ export function createPixelAvatarEngine(
       if (!destroyed) fn();
     }, ms);
     pendingTimeouts.add(id);
+  };
+
+  const scheduleChoreoTimeout = (fn: () => void, ms: number): void => {
+    const id = window.setTimeout(() => {
+      choreoTimeouts.delete(id);
+      if (!destroyed) fn();
+    }, ms);
+    choreoTimeouts.add(id);
+  };
+
+  const clearChoreoTimeouts = (): void => {
+    choreoTimeouts.forEach((id) => window.clearTimeout(id));
+    choreoTimeouts.clear();
   };
 
   const bgBuf = new Uint32Array(PIXEL_COUNT), hairChunkBuf = new Uint32Array(PIXEL_COUNT);
@@ -900,10 +1035,18 @@ export function createPixelAvatarEngine(
       bra: state.bra,
       panties: state.panties,
       stockings: state.stockings,
+      garters: state.garters,
+      gloves: state.gloves,
+      choker: state.choker,
+      strapSlip: state.strapSlip,
+      isChangingClothes: state.isChangingClothes,
       handEnabled: state.handEnabled,
+      featherEnabled: state.featherEnabled,
       cubeEnabled: state.cubeEnabled,
       pullFabric: state.pullFabric,
       animationsEnabled: state.animationsEnabled,
+      musicBoxEnabled: state.musicBoxEnabled,
+      stageTheme: state.stageTheme,
       currentAnimation: state.currentAnim,
       mood: state.mood,
       affection: Math.round(state.affection),
@@ -911,7 +1054,8 @@ export function createPixelAvatarEngine(
       zoneLabel: currentZoneLabel,
       hintDismissed,
       lastInteractionEvent,
-      activeRigPose: state.customRigPose,
+      activeRigPose: state.manualRigPose ?? state.customRigPose,
+      manualRigActive: Boolean(state.manualRigPose),
     };
   }
 
@@ -944,18 +1088,75 @@ export function createPixelAvatarEngine(
 
   function buildBackground(): void {
     const horizon = Math.round(H * 0.475);
+    const palettes: Record<
+      StageThemeId,
+      {
+        skyTop: [number, number, number];
+        skyBot: [number, number, number];
+        floorTop: [number, number, number];
+        floorBot: [number, number, number];
+        discLow: [number, number, number];
+        discHi: [number, number, number];
+      }
+    > = {
+      gothic: {
+        skyTop: [62, 61, 90],
+        skyBot: [98, 96, 132],
+        floorTop: [41, 39, 59],
+        floorBot: [21, 20, 33],
+        discLow: [152, 156, 188],
+        discHi: [188, 192, 224],
+      },
+      moonlight: {
+        skyTop: [24, 34, 68],
+        skyBot: [58, 78, 126],
+        floorTop: [22, 28, 48],
+        floorBot: [10, 14, 26],
+        discLow: [120, 148, 196],
+        discHi: [176, 204, 240],
+      },
+      crimson: {
+        skyTop: [54, 20, 36],
+        skyBot: [96, 36, 60],
+        floorTop: [36, 16, 26],
+        floorBot: [18, 8, 14],
+        discLow: [148, 114, 134],
+        discHi: [192, 152, 174],
+      },
+      daylight: {
+        skyTop: [122, 122, 148],
+        skyBot: [164, 162, 188],
+        floorTop: [82, 80, 102],
+        floorBot: [52, 50, 68],
+        discLow: [186, 188, 212],
+        discHi: [222, 224, 242],
+      },
+    };
+    const p = palettes[state.stageTheme] ?? palettes.gothic;
+
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
       const idx = y * W + x, dx = (x - CX) / 170, dy = (y - 120) / 210;
       const vig = clamp(1 - (dx * dx + dy * dy) * 0.24, 0.72, 1), d = bayer(x, y) * 2.2;
       let r: number, g: number, b: number;
-      if (y < horizon) { const t = y / horizon; r = lerp(63, 102, t) * vig + d; g = lerp(61, 98, t) * vig + d; b = lerp(92, 134, t) * vig + d; }
-      else { const t = (y - horizon) / (H - horizon); r = lerp(39, 22, t) * vig + d; g = lerp(38, 21, t) * vig + d; b = lerp(58, 34, t) * vig + d; }
+      if (y < horizon) {
+        const t = y / horizon;
+        r = lerp(p.skyTop[0], p.skyBot[0], t) * vig + d;
+        g = lerp(p.skyTop[1], p.skyBot[1], t) * vig + d;
+        b = lerp(p.skyTop[2], p.skyBot[2], t) * vig + d;
+      } else {
+        const t = (y - horizon) / (H - horizon);
+        r = lerp(p.floorTop[0], p.floorBot[0], t) * vig + d;
+        g = lerp(p.floorTop[1], p.floorBot[1], t) * vig + d;
+        b = lerp(p.floorTop[2], p.floorBot[2], t) * vig + d;
+      }
       const px = (x - CX) / 168, py = (y - 364) / 48, pd = px * px + py * py;
       if (pd <= 1) {
         const rim = smoothstep(0.92, 1, pd), grad = clamp(1 - (y - 316) / 46, 0, 1);
-        r = lerp(152, 180, grad * .65) - rim * 22 + d; g = lerp(156, 184, grad * .65) - rim * 22 + d; b = lerp(186, 214, grad * .65) - rim * 18 + d;
-        const sd = Math.pow((x - (CX + 4)) / 40, 2) + Math.pow((y - 355) / 9, 2);
-        if (sd < 1) { const sh = (1 - sd) * 0.36; r *= 1 - sh; g *= 1 - sh; b *= 1 - sh; }
+        r = lerp(p.discLow[0], p.discHi[0], grad * .65) - rim * 22 + d;
+        g = lerp(p.discLow[1], p.discHi[1], grad * .65) - rim * 22 + d;
+        b = lerp(p.discLow[2], p.discHi[2], grad * .65) - rim * 18 + d;
+        const sd = Math.pow((x - (CX + 4)) / 42, 2) + Math.pow((y - 355) / 9, 2);
+        if (sd < 1) { const sh = (1 - sd) * 0.38; r *= 1 - sh; g *= 1 - sh; b *= 1 - sh; }
       }
       bgBuf[idx] = packRGBA(r, g, b);
     }
@@ -1014,7 +1215,13 @@ export function createPixelAvatarEngine(
     masks.headNorm = computeScanlineNormals(masks.head, 9999, S.headCenterY, S.headRy);
     masks.softSideBust = null; masks.softSideGlute = null;
     masks.softDom = rasterizeBezierMask((c) => view === 'front' ? traceBustFrontBezier(c) : traceGlutesBackBezier(c));
-    masks.peekDom = view === 'back' ? rasterizeBezierMask((c) => { for (const s of [-1, 1]) { c.beginPath(); c.ellipse(CX + s * 35, S.bustCenterY + 5, 16, 26, s * -0.1, 0, Math.PI * 2); c.fill(); } }) : u8();
+    masks.peekDom = view === 'back' ? rasterizeBezierMask((c) => {
+      for (const s of [-1, 1]) {
+        c.beginPath();
+        c.ellipse(CX + s * 39.0, S.bustCenterY + 6.5, 16.5, 26.0, s * -0.10, 0, Math.PI * 2);
+        c.fill();
+      }
+    }) : u8();
   }
 
   function getZipperOpeningHalfWidth(y: number, zipPct: number): number {
@@ -1042,64 +1249,161 @@ export function createPixelAvatarEngine(
     }
     applyOutline(garmentLayers.headBody, PAL.outline, CX - 40, 32, CX + 40, Math.ceil(S.chinY + 8));
 
-    // 2. Torso + Legs Base Body & Lingerie
+    // 2. Torso + Legs Base Body & Lingerie (3D-faithful porcelain anatomy + clean Z-ordered straps/garters/stockings!)
     for (let y = Math.floor(S.neckTopY - 2); y < H; y++) {
       const row = y * W;
       for (let x = 20; x < W - 20; x++) {
         const idx = row + x;
         if (!masks.torsoLegs[idx]) continue;
-        const nx = masks.torsoNorm.nx[idx], ny = masks.torsoNorm.ny[idx], nz = masks.torsoNorm.nz[idx], ax = Math.abs(x - CX);
-        let extraSh = (y >= S.chinY - 2 && y <= S.chinY + 6 && (!isSide ? ax < 14 : Math.abs(x - SX) < 16)) ? 0.34 : 0;
+        let nx = masks.torsoNorm.nx[idx], ny = masks.torsoNorm.ny[idx], nz = masks.torsoNorm.nz[idx];
+        const ax = Math.abs(x - CX);
+        let extraSh = (y >= S.chinY - 2 && y <= S.chinY + 6 && (!isSide ? ax < 14 : Math.abs(x - SX) < 16)) ? 0.32 : 0;
+
         if (isFront) {
-          if (y > S.bustBotY - 3 && y < S.bustBotY + 8 && ax < 40) extraSh = Math.max(extraSh, 0.22);
-          if (y > S.crotchY - 10 && y < S.crotchY + 4 && ax < 14) extraSh = Math.max(extraSh, 0.22);
+          // Delicate collarbone hollow contour
+          if (y >= S.neckBotY + 3 && y <= S.neckBotY + 9 && ax >= 7 && ax <= 20) {
+            const clDist = Math.abs(y - (S.neckBotY + 6.5 - (ax - 7) * 0.14));
+            if (clDist < 1.5) extraSh = Math.max(extraSh, 0.16 * (1 - clDist / 1.5));
+          }
+          // Soft rounded 3D porcelain belly right between bust underband & panties (matching 3D front ref!)
+          if (y >= S.bustBotY - 2 && y <= S.waistBandBotY + 8 && ax < 26) {
+            const bu = clamp((x - CX) / 18.5, -0.95, 0.95);
+            const bv = clamp((y - (S.waistY + 5.5)) / 12.5, -0.95, 0.95);
+            const br2 = bu * bu + bv * bv;
+            if (br2 < 1.0) {
+              const bWeight = (1 - br2) * 0.72;
+              nx = lerp(nx, bu, bWeight);
+              ny = lerp(ny, bv, bWeight);
+              nz = Math.sqrt(Math.max(0.08, 1 - Math.min(0.92, nx * nx + ny * ny)));
+              if (bv > 0.55) extraSh = Math.max(extraSh, (bv - 0.55) * 0.34);
+            }
+            // Subtle belly button dimple right above panty bow
+            const navelDist = Math.hypot(x - CX, (y - (S.waistY + 8.0)) * 1.2);
+            if (navelDist < 1.9) extraSh = Math.max(extraSh, 0.24 * (1 - navelDist / 1.9));
+          }
+          // Soft under-bust shadow & inner thigh shadow
+          if (y > S.bustBotY - 2 && y < S.bustBotY + 7 && ax < 38) extraSh = Math.max(extraSh, 0.20 * smoothstep(S.bustBotY + 7, S.bustBotY - 1, y));
+          if (y > S.crotchY - 8 && y < S.crotchY + 5 && ax < 14) extraSh = Math.max(extraSh, 0.22);
         } else if (!isSide) {
-          if (y > S.shoulderY + 8 && y < S.waistY + 4 && ax <= 2.0) extraSh = Math.max(extraSh, 0.20 * (1 - ax / 2.2));
-          if (y > S.gluteCenterY + S.gluteRy - 2 && y < S.gluteCenterY + S.gluteRy + 8 && ax < 48) extraSh = Math.max(extraSh, 0.26);
+          // Sculpted back spine hollow, shoulder-blade contour & under-glute crease matching 3D back ref!
+          if (y > S.shoulderY + 7 && y < S.waistY + 3 && ax <= 2.4) extraSh = Math.max(extraSh, 0.22 * (1 - ax / 2.5));
+          if (y > S.shoulderY + 10 && y < S.bustCenterY - 4 && ax >= 12 && ax <= 20) extraSh = Math.max(extraSh, 0.08);
+          if (y > S.gluteCenterY + S.gluteRy - 2 && y < S.gluteCenterY + S.gluteRy + 9 && ax < 50) {
+            extraSh = Math.max(extraSh, 0.28 * smoothstep(S.gluteCenterY + S.gluteRy + 9, S.gluteCenterY + S.gluteRy - 1, y));
+          }
+        } else {
+          // Side profile soft under-bust & under-glute shadow
+          if (y >= 166 && y <= 176 && x < SX - 12) extraSh = Math.max(extraSh, 0.20);
+          if (y >= 224 && y <= 236 && x > SX + 6) extraSh = Math.max(extraSh, 0.24);
         }
+
         garmentLayers.torsoBody[idx] = shadeMaterial3D(x, y, nx, ny, nz, 'skin', extraSh, 0.25);
 
-        // Choker on bare neck
-        if (y >= S.neckMidY - 2 && y <= S.neckMidY + 3 && (!isSide ? ax < 13 : Math.abs(x - SX) < 15)) {
+        // Optional independent gothic choker (only when state.choker is ON — clean bare porcelain neck by default!)
+        if (state.choker && y >= S.neckMidY - 2 && y <= S.neckMidY + 3 && (!isSide ? ax < 12.5 : Math.abs(x - SX) < 14.5)) {
           garmentLayers.torsoBody[idx] = (y === Math.round(S.neckMidY)) ? PAL.latexMid : PAL.latexDeep;
         }
 
-        // Medias (Stockings + garters)
-        const stockTop = isSide ? (232 + (x - SX) * 0.28) : (isFront ? (S.thighBandY + 5) : (S.thighBandY + 14));
-        const scallop = Math.sin(x * 0.68) * 1.8;
-        if (y >= stockTop + scallop * 0.45) garmentLayers.torsoMedias[idx] = shadeMaterial3D(x, y, nx, ny, nz, 'latex', extraSh, 0.42);
-        else if (y >= stockTop - 6 + scallop) garmentLayers.torsoMedias[idx] = ((x & 3) === 0 && y < stockTop - 2) ? PAL.whiteShadow : (nx < 0.25 ? PAL.whitePure : PAL.whiteShadow);
-        const onStrap = isSide ? (y >= 186 && y < stockTop - 2 && Math.abs(x - (SX - 8)) <= 1.4) : (y >= (isFront ? S.waistY + 14 : S.gluteCenterY + 12) && y < stockTop - 2 && Math.abs(ax - 22) <= 1.4);
-        if (onStrap) garmentLayers.torsoMedias[idx] = (y >= stockTop - 6 && y <= stockTop - 3) ? PAL.silverHi : PAL.latexDeep;
-
-        // Braga (Brief)
-        if (isSide) {
-          const topP = 178 - (x - SX) * 0.22, botP = 224 + (x - SX) * 0.14;
-          if (y >= topP && y <= botP && x < SX + 24) garmentLayers.torsoBraga[idx] = (y - topP < 2.4 || botP - y < 2.4) ? PAL.whitePure : shadeMaterial3D(x, y, nx, ny, nz, 'latex', 0, 0.45);
-        } else if (y >= S.waistBandTopY + 4 && y <= S.crotchY + 12) {
-          const topCurve = (S.waistBandTopY + 10) + Math.pow(ax / 56, 1.45) * 8;
-          const botCut = isFront ? (S.crotchY + 6) - Math.pow(ax / 38, 1.15) * 28 : (S.crotchY + 2) - Math.pow(ax / 48, 1.2) * 18;
-          if (y >= topCurve && y <= botCut) garmentLayers.torsoBraga[idx] = (y - topCurve < 2.4 || botCut - y < 2.3) ? (nx < 0.2 ? PAL.whitePure : PAL.whiteShadow) : shadeMaterial3D(x, y, nx, ny, nz, 'latex', 0, 0.45);
-          if (isFront && Math.abs(y - (S.waistBandTopY + 14)) <= 1.8 && ax <= 4 && (ax <= 1.5 || Math.abs(y - (S.waistBandTopY + 14)) <= 0.9)) garmentLayers.torsoBraga[idx] = PAL.whitePure;
+        // Medias (Glossy black thigh/knee-high stockings + pure white ruffled cuffs + optional garter straps!)
+        const stockTop = isSide ? (244 + (x - SX) * 0.24) : (isFront ? (S.thighBandY + 28) : (S.thighBandY + 30));
+        const scallop = Math.sin(x * 0.72) * 1.65;
+        if (y >= stockTop + scallop * 0.42) {
+          garmentLayers.torsoMedias[idx] = shadeMaterial3D(x, y, nx, ny, nz, 'latex', extraSh * 0.5, 0.62);
+        } else if (y >= stockTop - 6.5 + scallop) {
+          const isRuffleShadow = ((x & 3) === 0 && y < stockTop - 2.5) || y > stockTop - 1.2 + scallop * 0.42;
+          garmentLayers.torsoMedias[idx] = isRuffleShadow ? PAL.whiteShadow : (nx < 0.35 ? PAL.whitePure : PAL.whiteShadow);
         }
 
-        // Sostén straps & back clasp
+        // Garter straps (vertical thin black straps + silver clips descending from panty edge to ruffled cuffs!)
+        if (state.garters && state.panties) {
+          const garterStartY = isSide ? 196 : (isFront ? S.waistBandTopY + 34 : S.gluteCenterY + 26);
+          const garterXPos = isSide ? (SX - 6) : 22.5;
+          const onGarter = isSide
+            ? (y >= garterStartY && y < stockTop - 2 && Math.abs(x - garterXPos) <= 1.15)
+            : (y >= garterStartY && y < stockTop - 2 && Math.abs(ax - garterXPos) <= 1.2);
+          if (onGarter) {
+            garmentLayers.torsoMedias[idx] = (y >= stockTop - 6 && y <= stockTop - 3) ? PAL.silverHi : PAL.latexDeep;
+          }
+        }
+
+        // Braga (3D-faithful glossy black high-cut panties with crisp white trim & tiny front bow!)
         if (isSide) {
-          if (y >= 92 && y <= 122 && Math.abs(x - (SX - 2)) <= 1.8) garmentLayers.torsoSosten[idx] = PAL.latexDeep;
-          if (y >= 132 && y <= 145 && x >= SX - 18) garmentLayers.torsoSosten[idx] = (y <= 133 || y >= 144) ? PAL.whiteShadow : shadeMaterial3D(x, y, nx, ny, nz, 'latex', 0, 0.42);
-        } else if (y >= S.shoulderY - 2 && y <= S.bustCenterY + 14) {
-          const sPos = isFront ? lerp(20, 23, clamp((y - S.shoulderY) / 26, 0, 1)) : lerp(19, 17, clamp((y - S.shoulderY) / 36, 0, 1));
-          if (y >= S.shoulderY && y <= (isFront ? S.bustTopY + 16 : S.bustCenterY - 2) && Math.abs(ax - sPos) <= 1.5) garmentLayers.torsoSosten[idx] = PAL.latexDeep;
-          if (!isFront && y >= S.bustCenterY - 4 && y <= S.bustCenterY + 9 && ax < 36) {
-            if (ax <= 2.2 && y >= S.bustCenterY - 1 && y <= S.bustCenterY + 6) garmentLayers.torsoSosten[idx] = Math.abs(y - (S.bustCenterY + 2.5)) < 1 ? PAL.silverHi : PAL.silverMid;
-            else garmentLayers.torsoSosten[idx] = (y === Math.round(S.bustCenterY - 4) || y === Math.round(S.bustCenterY + 9)) ? PAL.whiteShadow : shadeMaterial3D(x, y, nx, ny, nz, 'latex', 0, 0.42);
+          const topP = 186 - (x - SX) * 0.14;
+          const botP = 197 + smoothstep(SX - 20, SX + 18, x) * 16 - smoothstep(SX + 16, SX + 40, x) * 10;
+          if (y >= topP && y <= botP && x < SX + 26) {
+            garmentLayers.torsoBraga[idx] = (y - topP < 2.2 || botP - y < 2.2)
+              ? PAL.whitePure
+              : shadeMaterial3D(x, y, nx, ny, nz, 'latex', 0, 0.55);
+          }
+        } else if (y >= S.waistBandTopY + 8 && y <= S.crotchY + 12) {
+          // Graceful V-dipped front waistband / clean horizontal-arched back waistband matching 3D refs
+          const topCurve = isFront
+            ? (S.waistBandTopY + 20.5) - Math.pow(clamp(ax / 46, 0, 1), 1.35) * 10.5
+            : (S.waistBandTopY + 12.5) + Math.pow(clamp(ax / 52, 0, 1), 1.55) * 5.0;
+          const botCut = isFront
+            ? (S.crotchY + 5.5) - Math.pow(clamp(ax / 36, 0, 1), 1.25) * 26
+            : (S.crotchY + 1.0) - Math.pow(clamp(ax / 48, 0, 1), 1.25) * 18;
+          if (y >= topCurve && y <= botCut) {
+            const onTrim = (y - topCurve < 2.1 || botCut - y < 2.1);
+            garmentLayers.torsoBraga[idx] = onTrim
+              ? (nx < 0.25 ? PAL.whitePure : PAL.whiteShadow)
+              : shadeMaterial3D(x, y, nx, ny, nz, 'latex', 0, 0.62);
+          }
+          // Cute tiny pure white bow at center front of panties (matches 3D front ref!)
+          if (isFront && Math.abs(y - (S.waistBandTopY + 19.5)) <= 2.0 && ax <= 4.2) {
+            const bowWing = Math.abs(y - (S.waistBandTopY + 19.5)) <= (ax <= 1.2 ? 1.0 : 1.7);
+            if (bowWing) garmentLayers.torsoBraga[idx] = PAL.whitePure;
+          }
+        }
+
+        // Sostén on Torso: STRICTLY anatomically correct Z-order (ZERO bra line behind chest!)
+        if (isFront) {
+          // Front collarbone segment ONLY (from shoulder top down into bust top edge — NEVER below S.bustTopY + 3!)
+          const isLeftSide = x < CX;
+          const strapSlipped =
+            state.strapSlip === 'both' || (state.strapSlip === 'left' && isLeftSide);
+          if (!strapSlipped && y >= S.shoulderY - 1 && y <= S.bustTopY + 4) {
+            const sPos = lerp(19.5, 22.0, clamp((y - S.shoulderY) / 14, 0, 1));
+            if (Math.abs(ax - sPos) <= 1.25) {
+              garmentLayers.torsoSosten[idx] = PAL.latexDeep;
+            }
+          }
+        } else if (isSide) {
+          // Side view: ONLY the sleek rear side-band behind x >= SX - 5 (NEVER behind the chest!)
+          if (y >= 133 && y <= 145 && x >= SX - 5) {
+            garmentLayers.torsoSosten[idx] =
+              (y <= 134.2 || y >= 143.8)
+                ? PAL.whitePure
+                : shadeMaterial3D(x, y, nx, ny, nz, 'latex', 0, 0.52);
+          }
+        } else {
+          // Back view: crisp thin vertical straps + horizontal glossy black back band with white piping & silver center clasp!
+          if (y >= S.shoulderY - 1 && y <= S.bustCenterY + 11) {
+            const isLeftSide = x < CX;
+            const strapSlipped =
+              state.strapSlip === 'both' || (state.strapSlip === 'left' && isLeftSide);
+            if (!strapSlipped && y >= S.shoulderY && y <= S.bustCenterY - 4) {
+              const sPos = lerp(20.5, 16.0, clamp((y - S.shoulderY) / 38, 0, 1));
+              if (Math.abs(ax - sPos) <= 1.25) garmentLayers.torsoSosten[idx] = PAL.latexDeep;
+            }
+            if (y >= S.bustCenterY - 4 && y <= S.bustCenterY + 9 && ax < 42) {
+              if (ax <= 2.0 && y >= S.bustCenterY - 1 && y <= S.bustCenterY + 6) {
+                garmentLayers.torsoSosten[idx] =
+                  Math.abs(y - (S.bustCenterY + 2.5)) < 1.2 ? PAL.whitePure : PAL.silverMid;
+              } else {
+                const isPiping = y <= S.bustCenterY - 2.6 || y >= S.bustCenterY + 7.6;
+                garmentLayers.torsoSosten[idx] = isPiping
+                  ? (nx < 0.25 ? PAL.whitePure : PAL.whiteShadow)
+                  : shadeMaterial3D(x, y, nx, ny, nz, 'latex', 0, 0.56);
+              }
+            }
           }
         }
       }
     }
     applyOutline(garmentLayers.torsoBody, PAL.outline, 18, Math.floor(S.neckTopY - 4), W - 19, H - 1);
 
-    // 3. Dedicated Articulated Arms (Left & Right in front/back; Front Arm in side)
+    // 3. Dedicated Articulated Arms (fallback masks — unified 2-bone SDF arm renders dynamically!)
     if (isSide) {
       for (let y = 84; y <= 244; y++) {
         const row = y * W;
@@ -1130,23 +1434,67 @@ export function createPixelAvatarEngine(
       }
     }
 
-    // 4. Soft Domains (Bust / Glutes) Base Skin + Lingerie
+    // 4. Soft Domains (Bust / Glutes) Base Skin + 3D-Faithful Lingerie (Straps sit ON TOP OF upper chest!)
     if (isFront) {
       const y0 = Math.floor(S.bustTopY - 4), y1 = Math.ceil(S.bustBotY + 8), x0 = Math.floor(CX - S.bustCenterX - S.bustRx - 6), x1 = Math.ceil(CX + S.bustCenterX + S.bustRx + 6);
       for (let y = y0; y <= y1; y++) {
         const row = y * W;
         for (let x = x0; x <= x1; x++) {
           const idx = row + x; if (!masks.softDom[idx]) continue;
-          const s = x < CX ? -1 : 1, bx = CX + s * S.bustCenterX, u = clamp((x - bx) / S.bustRx, -.96, .96), v = clamp((y - S.bustCenterY) / S.bustRy, -.96, .96);
-          const r2 = Math.min(.95, u * u + v * v), nz = Math.sqrt(1 - r2), cleft = smoothstep(6.0, 0, Math.abs(x - CX)) * 0.36;
-          garmentLayers.softBody[idx] = shadeMaterial3D(x, y, u, v, nz, 'skin', cleft + (v > .56 ? .22 : 0), 0.28);
-          const cupTopV = -.44 + Math.pow(Math.abs(u - s * .05), 1.6) * .38 + smoothstep(13, 0, Math.abs(x - CX)) * .44;
-          if (v >= cupTopV) garmentLayers.softSosten[idx] = (v - cupTopV < .088 || (r2 > .84 && v > .35)) ? (u < .2 ? PAL.whitePure : PAL.whiteShadow) : shadeMaterial3D(x, y, u, v, nz, 'latex', cleft, .62);
-          if (Math.abs(x - CX) <= 4 && Math.abs(y - (S.bustCenterY + 6)) <= 2 && (Math.abs(x - CX) <= 1.4 || Math.abs(y - (S.bustCenterY + 6)) <= .9)) garmentLayers.softSosten[idx] = PAL.whitePure;
+          const s = x < CX ? -1 : 1, bx = CX + s * S.bustCenterX;
+          const u = clamp((x - bx) / S.bustRx, -.96, .96), v = clamp((y - S.bustCenterY) / S.bustRy, -.96, .96);
+          const r2 = Math.min(.95, u * u + v * v), nz = Math.sqrt(1 - r2), cleft = smoothstep(6.2, 0, Math.abs(x - CX)) * 0.34;
+          garmentLayers.softBody[idx] = shadeMaterial3D(x, y, u, v, nz, 'skin', cleft + (v > .58 ? .22 : 0), 0.28);
+
+          // Sweetheart demi-cup glossy black bra with crisp white upper & lower trim (matches 3D front ref!)
+          const cupTopV = -.40 + Math.pow(Math.abs(u - s * .06), 1.55) * .36 + smoothstep(14, 0, Math.abs(x - CX)) * .46;
+          const ax = Math.abs(x - CX);
+          const isLeftSide = s === -1;
+          const strapSlipped =
+            state.strapSlip === 'both' || (state.strapSlip === 'left' && isLeftSide);
+
+          if (v >= cupTopV) {
+            const onUpperTrim = v - cupTopV < 0.082;
+            const onLowerTrim = r2 > 0.85 && v > 0.42;
+            let bCol: number;
+            if (onUpperTrim || onLowerTrim) {
+              bCol = u < 0.25 ? PAL.whitePure : PAL.whiteShadow;
+            } else {
+              bCol = shadeMaterial3D(x, y, u, v, nz, 'latex', cleft, 0.78);
+              // Bright soft studio highlight on glossy black demi-cups matching 3D ref!
+              const hl = Math.exp(-((u + s * 0.14) * (u + s * 0.14) * 14 + (v + 0.06) * (v + 0.06) * 18));
+              if (hl > 0.65) bCol = PAL.latexSpec3;
+              else if (hl > 0.35 && bCol !== PAL.latexSpec3) bCol = PAL.latexSpec2;
+            }
+            garmentLayers.softSosten[idx] = bCol;
+          } else {
+            // Bra strap riding CLEANLY ON TOP OF the upper porcelain bust skin into cup apex!
+            if (!strapSlipped) {
+              const strapX = lerp(22.0, 26.2, clamp((y - S.bustTopY) / 28, 0, 1));
+              if (Math.abs(ax - strapX) <= 1.22) {
+                // Tiny bright silver adjuster clip right above the cup apex!
+                garmentLayers.softSosten[idx] = (cupTopV - v < 0.095) ? PAL.silverHi : PAL.latexDeep;
+              }
+            } else {
+              // Slipped strap gracefully draped outward across the upper outer bust curve!
+              const tDrop = clamp((v - (cupTopV - 0.32)) / 0.32, 0, 1);
+              const droopAx = lerp(47.0, 27.5, tDrop * tDrop);
+              if (v > cupTopV - 0.34 && Math.abs(ax - droopAx) <= 1.25) {
+                garmentLayers.softSosten[idx] = PAL.latexDeep;
+              }
+            }
+          }
+
+          // Cute tiny pure white ribbon bow at center gore of bra (matches 3D front ref!)
+          if (ax <= 4.4 && Math.abs(y - (S.bustCenterY + 5.0)) <= 2.2) {
+            if (ax <= 1.3 || Math.abs(y - (S.bustCenterY + 5.0)) <= 1.15) {
+              garmentLayers.softSosten[idx] = PAL.whitePure;
+            }
+          }
         }
       }
       applyOutline(garmentLayers.softBody, PAL.outline, x0 - 2, y0 - 2, x1 + 2, y1 + 2);
-      applyOutline(garmentLayers.softSosten, PAL.outline, x0 - 2, y0 - 2, x1 + 2, y1 + 2);
+      // NOTE: Do NOT call applyOutline on softSosten — avoids stray black outline halo cutting across porcelain chest!
     } else if (isSide) {
       const sideBust = masks.softSideBust;
       const sideGlute = masks.softSideGlute;
@@ -1157,25 +1505,35 @@ export function createPixelAvatarEngine(
             const idx = row + x; if (!sideBust[idx]) continue;
             const u = clamp((x - S.sideBustX) / S.sideBustRx, -.96, .96), v = clamp((y - S.sideBustY) / S.sideBustRy, -.96, .96), nz = Math.sqrt(1 - Math.min(.95, u * u + v * v));
             garmentLayers.softBody[idx] = shadeMaterial3D(x, y, u, v, nz, 'skin', v > .58 ? .24 : 0, 0.28);
-            const cupTopV = -.35 + u * .25;
-            if (v >= cupTopV) garmentLayers.softSosten[idx] = (v - cupTopV < .085) ? PAL.whitePure : shadeMaterial3D(x, y, u, v, nz, 'latex', 0, .65);
+            // Smooth 3D-faithful side demi-cup dipping gracefully down & sweeping back into underarm band!
+            const cupTopV = -0.16 + Math.sin(clamp((u + 0.85) / 1.75, 0, 1) * Math.PI) * 0.24 - smoothstep(0.35, 0.92, u) * 0.26;
+            if (v >= cupTopV) {
+              garmentLayers.softSosten[idx] = (v - cupTopV < 0.085)
+                ? PAL.whitePure
+                : shadeMaterial3D(x, y, u, v, nz, 'latex', 0, 0.72);
+            }
           }
         }
       }
       if (sideGlute) {
-        for (let y = 160; y <= 236; y++) {
+        for (let y = 160; y <= 238; y++) {
           const row = y * W;
-          for (let x = SX; x <= SX + 62; x++) {
+          for (let x = SX; x <= SX + 64; x++) {
             const idx = row + x; if (!sideGlute[idx]) continue;
             const u = clamp((x - S.sideGluteX) / S.sideGluteRx, -.96, .96), v = clamp((y - S.sideGluteY) / S.sideGluteRy, -.96, .96), nz = Math.sqrt(1 - Math.min(.95, u * u + v * v));
             garmentLayers.softBody[idx] = shadeMaterial3D(x, y, u, v, nz, 'skin', v > .56 ? .25 : 0, 0.28);
-            const topP = 172 - (x - SX) * .06, botP = 220 - Math.max(0, x - SX - 24) * .45;
-            if (y >= topP && y <= botP) garmentLayers.softBraga[idx] = (y - topP < 2.4 || botP - y < 2.4) ? PAL.whitePure : shadeMaterial3D(x, y, u, v, nz, 'latex', 0, .58);
+            // High-cut sleek side panty band curving across upper hip & cheek (matching 3D side ref!)
+            const topP = 183 + Math.pow(clamp((x - SX) / 52, 0, 1), 1.4) * 7;
+            const botP = 194 + smoothstep(SX + 10, SX + 46, x) * 14;
+            if (y >= topP && y <= botP) {
+              garmentLayers.softBraga[idx] = (y - topP < 2.2 || botP - y < 2.2)
+                ? PAL.whitePure
+                : shadeMaterial3D(x, y, u, v, nz, 'latex', 0, 0.62);
+            }
           }
         }
       }
-      applyOutline(garmentLayers.softBody, PAL.outline, SX - 88, 90, SX + 64, 238);
-      applyOutline(garmentLayers.softSosten, PAL.outline, SX - 88, 90, SX, 180);
+      applyOutline(garmentLayers.softBody, PAL.outline, SX - 88, 90, SX + 66, 240);
     } else {
       const y0 = Math.floor(S.gluteCenterY - S.gluteRy - 4), y1 = Math.ceil(S.gluteCenterY + S.gluteRy + 6), x0 = Math.floor(CX - S.gluteCenterX - S.gluteRx - 6), x1 = Math.ceil(CX + S.gluteCenterX + S.gluteRx + 6);
       for (let y = y0; y <= y1; y++) {
@@ -1183,24 +1541,39 @@ export function createPixelAvatarEngine(
         for (let x = x0; x <= x1; x++) {
           const idx = row + x; if (!masks.softDom[idx]) continue;
           const s = x < CX ? -1 : 1, gx = CX + s * S.gluteCenterX, u = clamp((x - gx) / S.gluteRx, -.96, .96), v = clamp((y - S.gluteCenterY) / S.gluteRy, -.96, .96);
-          const nz = Math.sqrt(1 - Math.min(.95, u * u + v * v)), ax = Math.abs(x - CX), cleft = smoothstep(8, 0, ax) * smoothstep(-.68, .28, v) * .48;
-          garmentLayers.softBody[idx] = shadeMaterial3D(x, y, u, v, nz, 'skin', cleft + (v > .54 ? .22 : 0), 0.28);
-          if (y >= S.gluteCenterY + 6 && Math.abs(ax - 22) <= 1.35) garmentLayers.softMedias[idx] = PAL.latexDeep;
-          const topCut = (S.gluteCenterY - S.gluteRy + 6) + ax * .07, botCut = (S.gluteCenterY + 20) - Math.pow(ax / 42, 1.45) * 30 + smoothstep(15, 0, ax) * 7;
-          if (y >= topCut && y <= botCut) garmentLayers.softBraga[idx] = (y - topCut < 2.2 || botCut - y < 2.2) ? (u < .2 ? PAL.whitePure : PAL.whiteShadow) : shadeMaterial3D(x, y, u, v, nz, 'latex', cleft * .85, .58);
+          const nz = Math.sqrt(1 - Math.min(.95, u * u + v * v)), ax = Math.abs(x - CX), cleft = smoothstep(8.5, 0, ax) * smoothstep(-.68, .28, v) * .48;
+          const underShelfSh = v > 0.62 ? (v - 0.62) * 0.72 : 0;
+          garmentLayers.softBody[idx] = shadeMaterial3D(x, y, u, v, nz, 'skin', cleft + underShelfSh, 0.28);
+          if (state.garters && state.panties && y >= S.gluteCenterY + 4 && Math.abs(ax - 23.0) <= 1.25) {
+            garmentLayers.softMedias[idx] = PAL.latexDeep;
+          }
+          // Cheeky glossy black back panties with crisp white waistband & curved leg-cut piping (3D back ref!)
+          const topCut = (S.gluteCenterY - S.gluteRy + 7.5) + ax * .045;
+          const botCut = (S.gluteCenterY + 19.5) - Math.pow(ax / 45, 1.38) * 30 + smoothstep(16, 0, ax) * 7;
+          if (y >= topCut && y <= botCut) {
+            garmentLayers.softBraga[idx] = (y - topCut < 2.1 || botCut - y < 2.1)
+              ? (u < .25 ? PAL.whitePure : PAL.whiteShadow)
+              : shadeMaterial3D(x, y, u, v, nz, 'latex', cleft * .82, .68);
+          }
         }
       }
       applyOutline(garmentLayers.softBody, PAL.outline, x0 - 2, y0 - 2, x1 + 2, y1 + 2);
+      // Back side-bust peek: porcelain upper slope + crisp white rim + glossy black demi-cup below!
       for (let y = Math.floor(S.bustTopY); y <= Math.ceil(S.bustBotY + 6); y++) {
         const row = y * W;
-        for (let x = CX - 58; x <= CX + 58; x++) {
-          const idx = row + x; if (!masks.peekDom[idx] || Math.abs(x - CX) < 20) continue;
-          const s = x < CX ? -1 : 1, u = clamp((x - (CX + s * 35)) / 17, -.95, .95), v = clamp((y - S.bustCenterY) / 28, -.95, .95), nz = Math.sqrt(Math.max(.05, 1 - Math.min(.95, u * u + v * v)));
-          garmentLayers.peekBody[idx] = shadeMaterial3D(x, y, u, v, nz, 'skin', .22, 0.20);
-          if (y >= S.bustCenterY - 12) garmentLayers.peekSosten[idx] = y <= S.bustCenterY - 9 ? PAL.whiteShadow : shadeMaterial3D(x, y, u, v, nz, 'latex', .24, .32);
+        for (let x = CX - 60; x <= CX + 60; x++) {
+          const idx = row + x; if (!masks.peekDom[idx] || Math.abs(x - CX) < 25) continue;
+          const s = x < CX ? -1 : 1, u = clamp((x - (CX + s * 39.0)) / 16.5, -.95, .95), v = clamp((y - (S.bustCenterY + 6.5)) / 26, -.95, .95), nz = Math.sqrt(Math.max(.05, 1 - Math.min(.95, u * u + v * v)));
+          garmentLayers.peekBody[idx] = shadeMaterial3D(x, y, u, v, nz, 'skin', .18, 0.24);
+          const peekCupTop = S.bustCenterY - 7 + Math.abs(u) * 5;
+          if (y >= peekCupTop) {
+            garmentLayers.peekSosten[idx] = y <= peekCupTop + 2.4
+              ? PAL.whitePure
+              : shadeMaterial3D(x, y, u, v, nz, 'latex', .20, .48);
+          }
         }
       }
-      applyOutline(garmentLayers.peekBody, PAL.outline, CX - 60, Math.floor(S.bustTopY) - 2, CX + 60, Math.ceil(S.bustBotY) + 8);
+      applyOutline(garmentLayers.peekBody, PAL.outline, CX - 62, Math.floor(S.bustTopY) - 2, CX + 62, Math.ceil(S.bustBotY) + 8);
     }
   }
 
@@ -1237,15 +1610,39 @@ export function createPixelAvatarEngine(
         }
 
         suitTorsoMask[idx] = 1;
-        // Subtle anatomical shadows on pelvis & back spine/shoulder-blades
+        // Subtle anatomical shadows & 3D studio latex sheen on pelvis, back spine, shoulder blades & calves
         let extraSh = (isFront && y >= S.waistBandBotY - 2 && y <= S.crotchY + 5 && ax < 18) ? 0.24 : 0;
-        if (!isFront && !isSide && y > S.shoulderY + 4 && y < S.waistY) {
-          // Subtle sculpted spine furrow & waist shadow matching 3D back reference
-          if (ax <= 2.2) extraSh = Math.max(extraSh, 0.22 * (1 - ax / 2.4));
-          else if (ax >= 12 && ax <= 20 && y < S.shoulderY + 34) extraSh = Math.max(extraSh, 0.08);
+        if (!isFront && !isSide) {
+          if (y > S.shoulderY + 4 && y < S.waistY) {
+            // Sculpted central spine furrow & shoulder-blade contour matching 3D back reference
+            if (ax <= 2.2) extraSh = Math.max(extraSh, 0.28 * (1 - ax / 2.4));
+            else if (ax >= 13 && ax <= 23 && y < S.shoulderY + 38) extraSh = Math.max(extraSh, 0.06);
+          }
+          // Deep crisp under-glute shelf shadow on upper thighs right above the white thigh band!
+          if (y >= S.gluteCenterY + S.gluteRy - 3 && y <= S.gluteCenterY + S.gluteRy + 9 && ax < 54) {
+            extraSh = Math.max(extraSh, 0.34 * smoothstep(S.gluteCenterY + S.gluteRy + 9, S.gluteCenterY + S.gluteRy - 2, y));
+          }
         }
-        // Restrained specular on limbs/back (0.34 instead of 0.92!) for sleek satin latex
-        let col = shadeMaterial3D(x, y, nx, ny, nz, mat, extraSh, isOrig ? 0.34 : 0.45);
+        // Sleek satin latex with targeted 3D studio specular highlights on upper back & calves
+        let col = shadeMaterial3D(x, y, nx, ny, nz, mat, extraSh, isOrig ? 0.38 : 0.45);
+        if (isOrig && !isFront && !isSide) {
+          // Twin subtle shoulder-blade & lower-back studio highlights matching 3D back latex
+          if (y >= S.shoulderY + 10 && y <= S.shoulderY + 42 && ax >= 7 && ax <= 19) {
+            const sbHl = Math.exp(-((ax - 12.5) * (ax - 12.5) * 0.065 + (y - (S.shoulderY + 21)) * (y - (S.shoulderY + 21)) * 0.012));
+            if (sbHl > 0.70) col = PAL.latexSpec2;
+            else if (sbHl > 0.44) col = PAL.latexSpec1;
+          }
+          // Subtle thin spine-seam specular right above waistband
+          if (y >= S.waistBandTopY - 12 && y <= S.waistBandTopY - 1 && ax <= 1.2) {
+            col = PAL.latexSpec2;
+          }
+          // Crisp vertical studio sheen down each rounded calf
+          if (y >= S.kneeY + 6 && y <= S.ankleBandY - 8 && ax >= 13 && ax <= 24) {
+            const calfHl = Math.exp(-((ax - 18.0) * (ax - 18.0) * 0.14 + (y - S.calfPeakY) * (y - S.calfPeakY) * 0.0022));
+            if (calfHl > 0.68) col = PAL.latexSpec2;
+            else if (calfHl > 0.40) col = PAL.latexSpec1;
+          }
+        }
         const lit = nx < 0.28;
 
         // Collar / Neckband (with 3D back V-collar detail!)
@@ -1269,18 +1666,21 @@ export function createPixelAvatarEngine(
             if (y >= S.ankleBandY - 3 && y <= S.ankleBandY + 5) col = lit ? bandHi : bandSh;
           } else if (isMaid) { const bt = 169 - (x - SX) * 0.25; if (y >= bt && y <= bt + 8) col = PAL.whitePure; }
         } else if (isOrig) {
-          // Organic curved pelvic U-band matching 3D front & back
+          // Organic curved pelvic U-band matching 3D front & back (solid waist width!)
           const uCurve = isFront
-            ? (1 - Math.pow(clamp(ax / 46, 0, 1), 1.65)) * 15
-            : (1 - Math.pow(clamp(ax / 46, 0, 1), 1.85)) * 4;
-          const bandTop = S.waistBandTopY + uCurve * 0.42;
-          const bandBot = S.waistBandTopY + 13.0 + uCurve;
+            ? (1 - Math.pow(clamp(ax / 44, 0, 1), 1.65)) * 14.5
+            : (1 - Math.pow(clamp(ax / 46, 0, 1), 1.85)) * 3.0;
+          const bandTop = isFront ? S.waistBandTopY + uCurve * 0.42 : S.waistBandTopY - 1.5 + uCurve * 0.25;
+          const bandBot = isFront ? S.waistBandTopY + 13.0 + uCurve : S.waistBandTopY + 9.5 + uCurve;
           if (y >= bandTop && y <= bandBot && ax < 48) {
             col = (y - bandTop < 1.1 || bandBot - y < 1.1) ? PAL.latexDeep : (lit ? bandHi : bandSh);
             if (isFront && ax <= 2.2 && y <= bandTop + 7.2) col = PAL.latexDeep;
           }
-          const thY = isFront ? S.thighBandY : S.thighBandY + 12, thArch = Math.pow(ax / 56, 2) * 4.2;
-          if (y >= thY - thArch && y <= thY + S.thighBandH - thArch) col = (y - (thY - thArch) < 1.1 || (thY + S.thighBandH - thArch) - y < 1.1) ? PAL.latexDeep : (lit ? bandHi : bandSh);
+          // Crisp curved white thigh bands right beneath the under-glute shelf in back view!
+          const thY = isFront ? S.thighBandY : S.thighBandY + 18.5;
+          const thArch = isFront ? Math.pow(ax / 56, 2) * 4.2 : Math.pow(ax / 54, 2) * 6.5;
+          const thH = isFront ? S.thighBandH : 12.0;
+          if (y >= thY - thArch && y <= thY + thH - thArch) col = (y - (thY - thArch) < 1.1 || (thY + thH - thArch) - y < 1.1) ? PAL.latexDeep : (lit ? bandHi : bandSh);
           if (y >= S.ankleBandY - 3.5 && y <= S.ankleBandY + 4.5) col = lit ? bandHi : bandSh;
         } else if (isMaid) {
           if (isFront && y >= S.neckBotY && y <= S.waistY + 6 && ax < 14) col = (Math.abs(((y - S.neckBotY) % 10) - 5) < 1.2 && ax < 9) ? PAL.velvetDeep : (lit ? PAL.whitePure : PAL.whiteShadow);
@@ -1416,8 +1816,14 @@ export function createPixelAvatarEngine(
           bustSuitMask[idx] = 1;
           const s = x < CX ? -1 : 1, bx = CX + s * S.bustCenterX, u = clamp((x - bx) / S.bustRx, -.96, .96), v = clamp((y - S.bustCenterY) / S.bustRy, -.96, .96);
           const r2 = Math.min(.95, u * u + v * v), nz = Math.sqrt(1 - r2), cleft = smoothstep(5.5, 0, ax) * .36;
-          // Sleek single key light (specBoost 0.72 -> classy curved sheen, zero twin circles!)
-          let col = shadeMaterial3D(x, y, u, v, nz, mat, cleft + (v > .62 ? .22 : 0), isOrig ? 0.72 : 0.58);
+          // Bright studio key specular matching 3D glossy black latex bust!
+          let col = shadeMaterial3D(x, y, u, v, nz, mat, cleft + (v > .64 ? .22 : 0), isOrig ? 0.92 : 0.62);
+          if (isOrig && v < 0.05 && v > -0.62 && Math.abs(u + s * 0.22) < 0.44) {
+            const hl = Math.exp(-((u + s * 0.24) * (u + s * 0.24) * 14 + (v + 0.30) * (v + 0.30) * 16));
+            if (hl > 0.68) col = PAL.latexSpec4;
+            else if (hl > 0.42) col = PAL.latexSpec3;
+            else if (hl > 0.22 && col !== PAL.latexSpec3) col = PAL.latexSpec2;
+          }
           if (isMaid) {
             const heartTop = -.58 + Math.pow(Math.abs(u), 1.5) * .32 + smoothstep(14, 0, ax) * .28;
             if (v < heartTop) col = ((x + y) & 2) ? PAL.whitePure : PAL.whiteShadow;
@@ -1432,12 +1838,12 @@ export function createPixelAvatarEngine(
         }
       }
       if (isOrig || isMarfil) {
-        // Balanced sleek curved star-X marks matching the 3D front reference (no stray upper spike!)
+        // Bold needle-sharp curved star-X marks matching the 3D front reference!
         stampBezierColor(garmentLayers.softTraje, bustSuitMask, xColor, (c) => {
           for (const s of [-1, 1]) {
             const bx = CX + s * S.bustCenterX, by = S.bustCenterY;
-            traceTaperedArc(c, bx - s * 3.0, by + 1.0, bx + s * 13.0, by + 16.5, bx + s * 24.5, by + 28.5, 1.35);
-            traceTaperedArc(c, bx + s * 29.0, by + 3.0, bx + s * 17.5, by + 20.5, bx + s * 1.0, by + 32.5, 1.35);
+            traceTaperedArc(c, bx - s * 4.5, by - 3.5, bx + s * 13.5, by + 14.5, bx + s * 25.5, by + 29.0, 1.55);
+            traceTaperedArc(c, bx + s * 30.5, by + 2.0, bx + s * 17.0, by + 19.5, bx - s * 0.5, by + 33.0, 1.55);
           }
         });
         if (isMarfil) stampBezierColor(garmentLayers.softTraje, bustSuitMask, PAL.lilacTrim, (c) => {
@@ -1450,9 +1856,9 @@ export function createPixelAvatarEngine(
         for (let x = CX - 26; x <= CX + 26; x++) {
           const idx = row + x; if (!bustSuitMask[idx]) continue;
           const ax = Math.abs(x - CX);
-          if (openHalf <= .5) { if (ax <= 1.65) garmentLayers.softTraje[idx] = (((y + (x & 1)) & 1) === 0) ? zipLight : zipDark; }
-          else if (Math.abs(ax - openHalf) <= 1.55 && y <= zipTipY + 2) garmentLayers.softTraje[idx] = ((y & 1) === 0) ? zipLight : zipDark;
-          else if (y > zipTipY && ax <= 1.65) garmentLayers.softTraje[idx] = (((y + (x & 1)) & 1) === 0) ? zipLight : zipDark;
+          if (openHalf <= .5) { if (ax <= 1.75) garmentLayers.softTraje[idx] = (((y + (x & 1)) & 1) === 0) ? zipLight : zipDark; }
+          else if (Math.abs(ax - openHalf) <= 1.6 && y <= zipTipY + 2) garmentLayers.softTraje[idx] = ((y & 1) === 0) ? zipLight : zipDark;
+          else if (y > zipTipY && ax <= 1.75) garmentLayers.softTraje[idx] = (((y + (x & 1)) & 1) === 0) ? zipLight : zipDark;
           if (Math.abs(y - zipTipY) <= 3.1 && ax <= 3.0) { const ring = Math.hypot(ax, y - (zipTipY + 1.0)); garmentLayers.softTraje[idx] = (ring >= 1.1 && ring <= 2.6) ? zipLight : (ax <= 1.0 ? zipDark : zipMid); }
         }
       }
@@ -1506,30 +1912,46 @@ export function createPixelAvatarEngine(
             const idx = row + x; if (!masks.softDom[idx]) continue;
             gluteSuitMask[idx] = 1;
             const s = x < CX ? -1 : 1, gx = CX + s * S.gluteCenterX, u = clamp((x - gx) / S.gluteRx, -.96, .96), v = clamp((y - S.gluteCenterY) / S.gluteRy, -.96, .96);
-            const nz = Math.sqrt(1 - Math.min(.95, u * u + v * v)), ax = Math.abs(x - CX), cleft = smoothstep(8, 0, ax) * smoothstep(-.68, .28, v) * .46;
-            let col = shadeMaterial3D(x, y, u, v, nz, mat, cleft + (v > .58 ? .22 : 0), isOrig ? 0.72 : 0.56);
-            if (y <= S.waistBandTopY + 13 + (1 - Math.pow(clamp(ax / 44, 0, 1), 1.8)) * 5) col = u < .2 ? bandHi : bandSh;
+            const r2 = Math.min(.95, u * u + v * v), nz = Math.sqrt(1 - r2), ax = Math.abs(x - CX), cleft = smoothstep(8.5, 0, ax) * smoothstep(-.68, .28, v) * .52;
+            const lowerWeight = v > 0.62 ? (v - 0.62) * 0.65 : 0;
+            let col = shadeMaterial3D(x, y, u, v, nz, mat, cleft + lowerWeight, isOrig ? 0.86 : 0.58);
+            if (isOrig) {
+              // Crisp 3D upper-dome studio specular on each glute matching 3D back render!
+              const domeHl = Math.exp(-((u - s * 0.04) * (u - s * 0.04) * 10 + (v + 0.34) * (v + 0.34) * 14));
+              if (domeHl > 0.72) col = PAL.latexSpec3;
+              else if (domeHl > 0.42) col = PAL.latexSpec2;
+              else if (domeHl > 0.22 && col === PAL.latexBase) col = PAL.latexMid;
+              // Iconic sleek curved rim highlight along the lower under-glute shelf!
+              if (v > 0.76 && v < 0.93 && Math.abs(u) < 0.72 && ax > 7) {
+                col = v > 0.84 ? PAL.latexSpec2 : PAL.latexSpec1;
+              }
+            }
+            // Crisp gently-arched white waistband hugging the top of the glutes
+            const wbEdge = S.waistBandTopY + 9.0 + (1 - Math.pow(clamp(ax / 44, 0, 1), 1.85)) * 3.0;
+            if (y <= wbEdge) {
+              col = (wbEdge - y < 1.15) ? PAL.latexDeep : (u < .22 ? bandHi : bandSh);
+            }
             garmentLayers.softTraje[idx] = col;
           }
         }
         if (isOrig || isMarfil) {
-          // Large razor-sharp curved X marks on each glute matching 3D back photo
+          // Bold needle-sharp curved white X marks centered cleanly on each round glute (matching 3D back reference!)
           stampBezierColor(garmentLayers.softTraje, gluteSuitMask, xColor, (c) => {
-            for (const s of [-1, 1]) traceSharpCurvedX(c, CX + s * (S.gluteCenterX + 1.5), S.gluteCenterY + 3.0, 16.5, 18.5, s * 2.0, 1.2, 1.45);
+            for (const s of [-1, 1]) traceSharpCurvedX(c, CX + s * (S.gluteCenterX + 1.4), S.gluteCenterY + 1.5, 16.5, 19.2, s * 2.0, 1.2, 1.55);
           });
-          // Iconic white vertical seam + 3 horizontal stitches between the glutes!
-          for (let y = Math.round(S.waistBandTopY + 15); y <= Math.round(S.gluteCenterY + 11); y++) {
-            const idxC = y * W + CX;
-            if (gluteSuitMask[idxC]) garmentLayers.softTraje[idxC] = xColor;
-          }
-          // Tiny top V-gusset flare at waist-to-cleft junction
-          for (let dy = 0; dy <= 5; dy++) {
-            const y = Math.round(S.waistBandTopY + 14) + dy;
-            const spread = Math.round((5 - dy) * 0.9);
+          // Iconic white V-gusset + vertical cleft seam + 3 horizontal corset stitches!
+          const vTopY = Math.round(S.waistBandTopY + 11);
+          for (let dy = 0; dy <= 7; dy++) {
+            const y = vTopY + dy;
+            const spread = Math.round((7 - dy) * 0.85);
             if (gluteSuitMask[y * W + CX - spread]) garmentLayers.softTraje[y * W + CX - spread] = xColor;
             if (gluteSuitMask[y * W + CX + spread]) garmentLayers.softTraje[y * W + CX + spread] = xColor;
           }
-          for (const sy of [Math.round(S.gluteCenterY - 9), Math.round(S.gluteCenterY - 2), Math.round(S.gluteCenterY + 5)]) {
+          for (let y = vTopY + 7; y <= Math.round(S.gluteCenterY + 14); y++) {
+            const idxC = y * W + CX;
+            if (gluteSuitMask[idxC]) garmentLayers.softTraje[idxC] = xColor;
+          }
+          for (const sy of [Math.round(S.gluteCenterY - 8), Math.round(S.gluteCenterY - 1), Math.round(S.gluteCenterY + 6)]) {
             for (let dx = -3; dx <= 3; dx++) {
               const idxS = sy * W + CX + dx;
               if (gluteSuitMask[idxS]) garmentLayers.softTraje[idxS] = xColor;
@@ -1538,15 +1960,16 @@ export function createPixelAvatarEngine(
         }
         applyOutline(garmentLayers.softTraje, PAL.outline, x0 - 2, y0 - 2, x1 + 2, y1 + 2);
       }
-      // Subtle dark side-peek of bust on back view (no distracting bright grey spot!)
+      // Subtle dark side-peek of bust on back view matching 3D back reference!
       for (let y = Math.floor(S.bustTopY); y <= Math.ceil(S.bustBotY + 6); y++) {
         const row = y * W;
-        for (let x = CX - 58; x <= CX + 58; x++) {
-          const idx = row + x; if (!masks.peekDom[idx] || Math.abs(x - CX) < 20) continue;
-          const s = x < CX ? -1 : 1, u = clamp((x - (CX + s * 35)) / 17, -.95, .95), v = clamp((y - S.bustCenterY) / 28, -.95, .95), nz = Math.sqrt(Math.max(.05, 1 - Math.min(.95, u * u + v * v)));
-          garmentLayers.peekTraje[idx] = shadeMaterial3D(x, y, u, v, nz, mat, .26, 0.28);
+        for (let x = CX - 60; x <= CX + 60; x++) {
+          const idx = row + x; if (!masks.peekDom[idx] || Math.abs(x - CX) < 25) continue;
+          const s = x < CX ? -1 : 1, u = clamp((x - (CX + s * 39.0)) / 16.5, -.95, .95), v = clamp((y - (S.bustCenterY + 6.5)) / 26, -.95, .95), nz = Math.sqrt(Math.max(.05, 1 - Math.min(.95, u * u + v * v)));
+          garmentLayers.peekTraje[idx] = shadeMaterial3D(x, y, u, v, nz, mat, .26, 0.30);
         }
       }
+      applyOutline(garmentLayers.peekTraje, PAL.outline, CX - 62, Math.floor(S.bustTopY) - 2, CX + 62, Math.ceil(S.bustBotY) + 8);
     }
 
     // 4. Maid Skirt + Headpiece / Marfil Silk Sash + Tiara
@@ -1679,147 +2102,137 @@ export function createPixelAvatarEngine(
     const S = SKEL;
 
     if (view === 'front') {
-      // Sweeping lush asymmetrical white crown with 3 sharp curved horns + wispy lower tips
+      // Sculptural asymmetrical white crown matching 3D front reference (3 sharp black-banded spikes + right wisps)
       const backSpikes = rasterizeBezierMask((c) => {
-        c.beginPath(); c.moveTo(CX - 34, S.cheekY + 4);
-        c.bezierCurveTo(CX - 44, S.headTopY + 14, CX - 38, S.headTopY - 10, CX - 16, S.headTopY - 14);
-        // Main center-left tall peak
-        c.quadraticCurveTo(CX - 10, 15, CX - 6, 4);
-        c.quadraticCurveTo(CX + 5, 13, CX + 10, 26);
+        c.beginPath(); c.moveTo(CX - 36, S.cheekY + 3);
+        c.bezierCurveTo(CX - 46, S.headTopY + 12, CX - 40, S.headTopY - 11, CX - 16, S.headTopY - 15);
+        // Main tall central-left peak (curved horn!)
+        c.quadraticCurveTo(CX - 8, 18, CX - 3, 8);
+        c.quadraticCurveTo(CX + 8, 17, CX + 13, 28);
         // Second upper-right peak
-        c.quadraticCurveTo(CX + 17, 17, CX + 22, 13);
-        c.quadraticCurveTo(CX + 31, 22, CX + 34, 37);
+        c.quadraticCurveTo(CX + 20, 20, CX + 25, 16);
+        c.quadraticCurveTo(CX + 34, 25, CX + 37, 40);
         // Third outer-right peak
-        c.quadraticCurveTo(CX + 43, 35, CX + 45, 45);
-        c.quadraticCurveTo(CX + 41, 58, CX + 33, 64);
-        // Lower spiky wisps framing right jaw
-        c.quadraticCurveTo(CX + 41, 66, CX + 42, 70);
-        c.quadraticCurveTo(CX + 35, 75, CX + 31, 76);
-        c.quadraticCurveTo(CX + 38, 79, CX + 37, 83);
-        c.quadraticCurveTo(CX + 24, 90, CX + 14, 84);
+        c.quadraticCurveTo(CX + 46, 38, CX + 48, 48);
+        c.quadraticCurveTo(CX + 44, 61, CX + 35, 67);
+        // Lower sharp black-tipped wisps framing right jaw
+        c.quadraticCurveTo(CX + 44, 69, CX + 45, 73);
+        c.quadraticCurveTo(CX + 37, 78, CX + 33, 79);
+        c.quadraticCurveTo(CX + 41, 82, CX + 40, 86);
+        c.quadraticCurveTo(CX + 26, 93, CX + 15, 86);
         c.lineTo(CX + 16, S.headCenterY);
-        c.quadraticCurveTo(CX, S.headTopY + 6, CX - 20, S.headCenterY);
-        c.lineTo(CX - 18, 85);
-        c.quadraticCurveTo(CX - 30, 89, CX - 38, 79);
+        c.quadraticCurveTo(CX, S.headTopY + 5, CX - 21, S.headCenterY);
+        c.lineTo(CX - 19, 87);
+        c.quadraticCurveTo(CX - 32, 91, CX - 40, 81);
         c.closePath(); c.fill();
       });
-      const faceCut = rasterizeBezierMask((c) => { c.beginPath(); c.ellipse(CX, S.headCenterY + 1, S.headRx - 1.5, S.headRy - 2, 0, 0, Math.PI * 2); c.fill(); });
+      const faceCut = rasterizeBezierMask((c) => { c.beginPath(); c.ellipse(CX, S.headCenterY + 1, S.headRx - 1.2, S.headRy - 1.8, 0, 0, Math.PI * 2); c.fill(); });
       for (let i = 0; i < PIXEL_COUNT; i++) if (faceCut[i]) backSpikes[i] = 0;
       paintHairChunk(
         backSpikes,
         5,
         (x, y) => {
-          // Curved conical black bands near each sharp spike tip (matching 3D!)
-          const tip1 = y >= 9 + Math.abs(x - (CX - 6)) * 0.22 && y <= 16 + Math.abs(x - (CX - 6)) * 0.12 && x >= CX - 14 && x <= CX + 5;
-          const tip2 = y >= 18 + Math.abs(x - (CX + 21)) * 0.25 && y <= 25 + Math.abs(x - (CX + 21)) * 0.14 && x >= CX + 13 && x <= CX + 31;
-          const tip3 = y >= 40 + (x - (CX + 38)) * 0.2 && y <= 47 + (x - (CX + 38)) * 0.15 && x >= CX + 34;
-          const wisp1 = y >= 67 && y <= 72 && x >= CX + 29;
-          const wisp2 = y >= 78 && y <= 82 && x >= CX + 26;
+          const tip1 = y >= 13 + Math.abs(x - (CX - 3)) * 0.22 && y <= 20 + Math.abs(x - (CX - 3)) * 0.12 && x >= CX - 12 && x <= CX + 8;
+          const tip2 = y >= 21 + Math.abs(x - (CX + 24)) * 0.24 && y <= 28 + Math.abs(x - (CX + 24)) * 0.14 && x >= CX + 15 && x <= CX + 34;
+          const tip3 = y >= 43 + (x - (CX + 40)) * 0.22 && y <= 50 + (x - (CX + 40)) * 0.16 && x >= CX + 36;
+          const wisp1 = y >= 70 && y <= 75 && x >= CX + 31;
+          const wisp2 = y >= 81 && y <= 85 && x >= CX + 28;
           return tip1 || tip2 || tip3 || wisp1 || wisp2;
         },
         planes.hairWeightTop,
-        (_x, y) => smoothstep(S.chinY, 4, y) * .92,
+        (_x, y) => smoothstep(S.chinY, 8, y) * .92,
       );
 
-      // Left striped cheek curl (diagonal flowing zebra bands)
+      // Left striped spiral cheek curl (iconic tight black-and-white spiral beside left cheek!)
       const leftCurl = rasterizeBezierMask((c) => {
-        c.beginPath(); c.moveTo(CX - 28, 49);
-        c.bezierCurveTo(CX - 38, 62, CX - 36, 82, CX - 16, 84);
-        c.quadraticCurveTo(CX - 11, 82, CX - 14, 75);
-        c.quadraticCurveTo(CX - 24, 73, CX - 23, 57);
+        c.beginPath(); c.moveTo(CX - 28, 52);
+        c.bezierCurveTo(CX - 40, 65, CX - 38, 85, CX - 17, 87);
+        c.quadraticCurveTo(CX - 11, 85, CX - 15, 77);
+        c.quadraticCurveTo(CX - 25, 75, CX - 24, 60);
         c.closePath(); c.fill();
       });
       paintHairChunk(
         leftCurl,
         7,
         (x, y) => {
-          const s = (y - 53) - (x - (CX - 34)) * 0.62;
-          return (s >= 6 && s <= 12.5) || (s >= 18.5 && s <= 25);
+          const s = (y - 55) - (x - (CX - 35)) * 0.65;
+          return (s >= 6 && s <= 13.5) || (s >= 19.5 && s <= 26.5);
         },
         planes.hairWeightCurl,
-        (_x, y) => smoothstep(49, 85, y) * .95,
+        (_x, y) => smoothstep(52, 87, y) * .95,
       );
 
-      // Iconic big domed front zebra bang with CURVED flowing stripes (NOT straight horizontal bars!)
+      // Iconic huge domed front zebra bang sweeping over her right eye with 2 bold thick curved black stripes!
       const bigBangs = rasterizeBezierMask((c) => {
         c.beginPath();
-        c.moveTo(CX - 12, 41);
-        c.bezierCurveTo(CX - 3, 20, CX + 33, 21, CX + 36, 51);
-        c.bezierCurveTo(CX + 37, 68, CX + 27, 84, CX + 13, 84);
-        c.quadraticCurveTo(CX + 18, 70, CX + 18, 57);
-        c.bezierCurveTo(CX + 17, 47, CX + 4, 43, CX - 12, 41);
+        c.moveTo(CX - 14, 44);
+        c.bezierCurveTo(CX - 4, 21, CX + 36, 22, CX + 38, 53);
+        c.bezierCurveTo(CX + 39, 71, CX + 28, 86, CX + 13, 86);
+        c.quadraticCurveTo(CX + 18, 72, CX + 17, 59);
+        c.bezierCurveTo(CX + 15, 49, CX + 2, 46, CX - 14, 44);
         c.closePath(); c.fill();
       });
       paintHairChunk(
         bigBangs,
         6,
         (x, y) => {
-          // Polar/dome-curved zebra stripes sweeping naturally across the rounded bang
           const dx = x - (CX + 2);
-          const dy = y - 62;
-          const arcVal = Math.hypot(dx * 0.85, dy * 1.05);
-          const sweep = y - dx * 0.32 + Math.pow(dx / 24, 2) * 7.5;
-          return (sweep >= 40.5 && sweep <= 50.5 && arcVal > 14) || (sweep >= 59.0 && sweep <= 69.0);
+          const dy = y - 64;
+          const arcVal = Math.hypot(dx * 0.84, dy * 1.04);
+          const sweep = y - dx * 0.34 + Math.pow(dx / 23, 2) * 8.0;
+          return (sweep >= 41.5 && sweep <= 53.0 && arcVal > 13.5) || (sweep >= 61.5 && sweep <= 72.5);
         },
         planes.hairWeightBangs,
-        (_x, y) => smoothstep(20, 84, y) * .95,
+        (_x, y) => smoothstep(22, 86, y) * .95,
       );
     } else if (view === 'side') {
       const sideSpikes = rasterizeBezierMask((c) => {
-        c.beginPath(); c.moveTo(SX - 10, 42);
-        c.quadraticCurveTo(SX - 4, 16, SX - 6, 4); c.quadraticCurveTo(SX + 8, 11, SX + 11, 23);
-        c.quadraticCurveTo(SX + 16, 14, SX + 22, 11); c.quadraticCurveTo(SX + 32, 19, SX + 31, 34);
-        c.quadraticCurveTo(SX + 40, 33, SX + 39, 45); c.quadraticCurveTo(SX + 36, 58, SX + 26, 68);
-        c.lineTo(SX + 29, 74); c.lineTo(SX + 18, 81); c.quadraticCurveTo(SX + 13, 89, SX + 7, 84);
-        c.lineTo(SX - 6, 78); c.closePath(); c.fill();
+        c.beginPath(); c.moveTo(SX - 10, 44);
+        c.quadraticCurveTo(SX - 4, 18, SX - 5, 8); c.quadraticCurveTo(SX + 8, 14, SX + 11, 26);
+        c.quadraticCurveTo(SX + 16, 17, SX + 23, 14); c.quadraticCurveTo(SX + 33, 22, SX + 32, 37);
+        c.quadraticCurveTo(SX + 41, 36, SX + 40, 48); c.quadraticCurveTo(SX + 37, 61, SX + 27, 71);
+        c.lineTo(SX + 30, 77); c.lineTo(SX + 19, 84); c.quadraticCurveTo(SX + 14, 91, SX + 7, 86);
+        c.lineTo(SX - 6, 80); c.closePath(); c.fill();
       });
-      paintHairChunk(sideSpikes, 5, (x, y) => (y >= 8 && y <= 15 && x <= SX + 8) || (y >= 16 && y <= 23 && x >= SX + 11 && x <= SX + 29) || (y >= 37 && y <= 45 && x >= SX + 27) || (y >= 61 && y <= 69 && x >= SX + 18), planes.hairWeightTop, (_x, y) => smoothstep(82, 4, y) * .92);
+      paintHairChunk(sideSpikes, 5, (x, y) => (y >= 11 && y <= 18 && x <= SX + 8) || (y >= 19 && y <= 26 && x >= SX + 11 && x <= SX + 29) || (y >= 40 && y <= 48 && x >= SX + 27) || (y >= 64 && y <= 72 && x >= SX + 18), planes.hairWeightTop, (_x, y) => smoothstep(84, 8, y) * .92);
 
       const sideForelock = rasterizeBezierMask((c) => {
-        c.beginPath(); c.moveTo(SX - 12, 26); c.bezierCurveTo(SX - 39, 27, SX - 42, 64, SX - 22, 85);
-        c.bezierCurveTo(SX - 5, 74, SX + 4, 46, SX - 12, 26); c.closePath(); c.fill();
+        c.beginPath(); c.moveTo(SX - 12, 28); c.bezierCurveTo(SX - 40, 29, SX - 43, 66, SX - 22, 87);
+        c.bezierCurveTo(SX - 5, 76, SX + 4, 48, SX - 12, 28); c.closePath(); c.fill();
       });
-      paintHairChunk(sideForelock, 6, (x, y) => { const cy = y - (x - (SX - 20)) * .12 + Math.pow((x - (SX - 20)) / 22, 2) * 5.5; return (cy >= 40 && cy <= 51) || (cy >= 60 && cy <= 71); }, planes.hairWeightBangs, (_x, y) => smoothstep(25, 85, y) * .95);
+      paintHairChunk(sideForelock, 6, (x, y) => { const cy = y - (x - (SX - 20)) * .12 + Math.pow((x - (SX - 20)) / 22, 2) * 5.5; return (cy >= 42 && cy <= 53) || (cy >= 62 && cy <= 73); }, planes.hairWeightBangs, (_x, y) => smoothstep(28, 87, y) * .95);
     } else {
-      // COMPLETELY REFINED BACK HAIR matching 3D back reference (smooth flowing spikes, ZERO square notches!)
+      // EXACT 3D-BACK-REFERENCE FLUFFY WHITE HAIR with 3 crisp black-tipped curved spikes on left-top + lower-left wisp!
       const backHair = rasterizeBezierMask((c) => {
         c.beginPath();
-        // Bottom-left fluffy nape curl
-        c.moveTo(CX - 28, 82);
-        // Lower-left curved wisp spike (sharp & curved)
-        c.quadraticCurveTo(CX - 36, 78, CX - 43, 68);
-        c.quadraticCurveTo(CX - 34, 67, CX - 29, 63);
-        // Mid-left big sweeping crest
-        c.bezierCurveTo(CX - 44, 54, CX - 48, 43, CX - 45, 32);
-        c.quadraticCurveTo(CX - 36, 36, CX - 32, 35);
-        // Upper-left prominent curved horn spike
-        c.bezierCurveTo(CX - 34, 24, CX - 27, 14, CX - 19, 10);
-        c.quadraticCurveTo(CX - 13, 18, CX - 9, 24);
-        // Top-center tall horn peak
-        c.quadraticCurveTo(CX - 4, 13, CX + 4, 5);
-        c.quadraticCurveTo(CX + 16, 15, CX + 22, 28);
-        // Lush round fluffy right side matching 3D silhouette
-        c.bezierCurveTo(CX + 40, 38, CX + 41, 67, CX + 34, 80);
-        // Soft curved bottom curls framing nape
-        c.quadraticCurveTo(CX + 22, 91, CX + 4, 83);
-        c.quadraticCurveTo(CX - 12, 92, CX - 28, 82);
+        c.moveTo(CX - 28, 84);
+        c.quadraticCurveTo(CX - 38, 80, CX - 45, 70);
+        c.quadraticCurveTo(CX - 35, 69, CX - 30, 65);
+        c.bezierCurveTo(CX - 46, 56, CX - 50, 44, CX - 46, 33);
+        c.quadraticCurveTo(CX - 37, 37, CX - 32, 36);
+        c.bezierCurveTo(CX - 35, 25, CX - 28, 15, CX - 20, 12);
+        c.quadraticCurveTo(CX - 13, 20, CX - 9, 26);
+        c.quadraticCurveTo(CX - 3, 15, CX + 5, 8);
+        c.quadraticCurveTo(CX + 18, 17, CX + 24, 30);
+        c.bezierCurveTo(CX + 43, 40, CX + 43, 69, CX + 35, 82);
+        c.quadraticCurveTo(CX + 22, 93, CX + 4, 85);
+        c.quadraticCurveTo(CX - 12, 94, CX - 28, 84);
         c.closePath(); c.fill();
       });
       paintHairChunk(
         backHair,
         5,
         (x, y) => {
-          // Sleek conical curved black tips following each spike direction (zero blocky cuts!)
-          const topTip = y >= 5 && y <= 14 + Math.abs(x - (CX + 4)) * 0.25 && x >= CX - 5 && x <= CX + 13;
-          const upLeftTip = y >= 10 && y <= 19 + (x - (CX - 19)) * 0.35 && x >= CX - 29 && x <= CX - 11;
-          const midLeftTip = x <= CX - 37 + (y - 38) * 0.32 && y >= 32 && y <= 46;
-          const lowLeftTip = x <= CX - 31 + (y - 70) * 0.45 && y >= 66 && y <= 75;
+          const topTip = y >= 8 && y <= 17 + Math.abs(x - (CX + 5)) * 0.26 && x >= CX - 4 && x <= CX + 14;
+          const upLeftTip = y >= 12 && y <= 22 + (x - (CX - 20)) * 0.35 && x >= CX - 30 && x <= CX - 11;
+          const midLeftTip = x <= CX - 38 + (y - 39) * 0.34 && y >= 33 && y <= 48;
+          const lowLeftTip = x <= CX - 32 + (y - 72) * 0.45 && y >= 68 && y <= 78;
           return topTip || upLeftTip || midLeftTip || lowLeftTip;
         },
         planes.hairWeightTop,
-        (_x, y) => smoothstep(86, 5, y) * .9,
+        (_x, y) => smoothstep(88, 8, y) * .9,
       );
-      for (let y = 62; y <= 92; y++) for (let x = CX - 48; x <= CX + 46; x++) if (backHair[y * W + x]) planes.hairWeightBot[y * W + x] = smoothstep(56, 88, y) * .7;
+      for (let y = 64; y <= 94; y++) for (let x = CX - 50; x <= CX + 48; x++) if (backHair[y * W + x]) planes.hairWeightBot[y * W + x] = smoothstep(58, 90, y) * .7;
     }
   }
 
@@ -1935,6 +2348,21 @@ export function createPixelAvatarEngine(
     compositeAllLayers();
   }
 
+  function rebuildLingerieAndComposite(): void {
+    garmentLayers.torsoBody.fill(0);
+    garmentLayers.torsoMedias.fill(0);
+    garmentLayers.torsoBraga.fill(0);
+    garmentLayers.torsoSosten.fill(0);
+    garmentLayers.softBody.fill(0);
+    garmentLayers.softMedias.fill(0);
+    garmentLayers.softBraga.fill(0);
+    garmentLayers.softSosten.fill(0);
+    garmentLayers.peekBody.fill(0);
+    garmentLayers.peekSosten.fill(0);
+    buildBaseAndLingerieLayers(state.view);
+    compositeAllLayers();
+  }
+
   // ---- FÍSICAS BLANDAS 2D, ANIMACIONES REACTIVAS, CUBO Y TAMAGOTCHI ----
   const mkSpring = (kx: number, ky: number, dx: number, dy: number, maxX: number, maxY: number): SpringState => ({
     x: 0, y: 0, vx: 0, vy: 0, cx: 0, cy: 0, kx, ky, dx, dy, maxX, maxY, squash: 0,
@@ -1973,12 +2401,128 @@ export function createPixelAvatarEngine(
     contacts.push({ x, y, zone, depth: depth * .45, clothDepth: depth * .2, targetDepth: depth, radius, shearX, shearY, hold: .04 });
   }
 
-  const pointer = { x: CX, y: 160, vx: 0, vy: 0, down: false, inside: false, grip: 0, petAccum: 0, activeZone: 0, draggingZipper: false, draggingSkirt: false };
+  const pointer: {
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    down: boolean;
+    inside: boolean;
+    grip: number;
+    petAccum: number;
+    activeZone: number;
+    draggingZipper: boolean;
+    draggingSkirt: boolean;
+    draggingArm: null | 'left' | 'right' | 'side';
+    draggingWaist: boolean;
+    waistGrabStartX: number;
+    waistGrabStartY: number;
+    waistSwayPullX: number;
+    waistPullY: number;
+  } = {
+    x: CX, y: 160, vx: 0, vy: 0, down: false, inside: false, grip: 0, petAccum: 0, activeZone: 0,
+    draggingZipper: false, draggingSkirt: false,
+    draggingArm: null, draggingWaist: false,
+    waistGrabStartX: CX, waistGrabStartY: 160, waistSwayPullX: 0, waistPullY: 0,
+  };
+
+  function wrapAngle(rad: number): number {
+    let a = (rad + Math.PI) % (Math.PI * 2);
+    if (a < 0) a += Math.PI * 2;
+    return a - Math.PI;
+  }
+
+  /**
+   * Analytical 2-Bone IK Solver for direct interactive canvas arm/hand grabbing.
+   * Guarantees smooth, natural elbow orientation with zero snapping across all 360° quadrants.
+   */
+  function solveArmIK(
+    side: -1 | 1,
+    targetX: number,
+    targetY: number,
+    isSideView: boolean,
+  ): { armAngle: number; elbowAngle: number } {
+    const S = SKEL;
+    const netVerticalY = pose.bodyBounceY + pose.crouchDepth - pose.jumpHeight;
+    const waistPivotX = CX + pose.hipSwayX;
+    const waistPivotY = S.waistY + netVerticalY;
+    const cosT = Math.cos(pose.torsoAngle), sinT = Math.sin(pose.torsoAngle);
+
+    const shSrcX = isSideView ? SX + 2 : CX + side * (S.shoulderX - 3.5);
+    const shSrcY = isSideView ? 100 : S.shoulderY + 9;
+    const elSrcX = isSideView ? SX - 4 : CX + side * (S.elbowX + 1);
+    const elSrcY = isSideView ? 152 : S.elbowY;
+    const wrSrcX = isSideView ? SX - 18 : CX + side * S.wristX;
+    const wrSrcY = isSideView ? 188 : S.wristY;
+
+    const relX = shSrcX - CX, relY = shSrcY - S.waistY;
+    const shX = waistPivotX + relX * cosT - relY * sinT;
+    const shY = waistPivotY + relX * sinT + relY * cosT + pose.armLiftY * 0.45;
+
+    const elRelX = elSrcX - shSrcX, elRelY = elSrcY - shSrcY;
+    const wrRelX = wrSrcX - elSrcX, wrRelY = wrSrcY - elSrcY;
+    const L1 = Math.hypot(elRelX, elRelY);
+    const L2 = Math.hypot(wrRelX, wrRelY);
+    const restUpper = Math.atan2(elRelY, elRelX);
+    const restForearm = Math.atan2(wrRelY, wrRelX);
+
+    const dx = targetX - shX, dy = targetY - shY;
+    const dist = clamp(Math.hypot(dx, dy), Math.abs(L1 - L2) + 6, L1 + L2 - 1.5);
+    const baseAngle = Math.atan2(dy, dx);
+    const cosAlpha = clamp((L1 * L1 + dist * dist - L2 * L2) / (2 * L1 * dist), -1, 1);
+    const alpha = Math.acos(cosAlpha);
+    const cosBeta = clamp((L1 * L1 + L2 * L2 - dist * dist) / (2 * L1 * L2), -1, 1);
+    const beta = Math.acos(cosBeta);
+
+    // Evaluate both elbow solutions and select the most anatomically natural downward/outward elbow
+    const uA = baseAngle + alpha;
+    const fA = uA - (Math.PI - beta);
+    const eAx = shX + Math.cos(uA) * L1, eAy = shY + Math.sin(uA) * L1;
+
+    const uB = baseAngle - alpha;
+    const fB = uB + (Math.PI - beta);
+    const eBx = shX + Math.cos(uB) * L1, eBy = shY + Math.sin(uB) * L1;
+
+    const scoreA = isSideView
+      ? (eAy * 1.15 + (eAx - shX) * 0.9)
+      : (eAy * 1.10 + side * (eAx - shX) * 0.88);
+    const scoreB = isSideView
+      ? (eBy * 1.15 + (eBx - shX) * 0.9)
+      : (eBy * 1.10 + side * (eBx - shX) * 0.88);
+
+    const chosenU = scoreA >= scoreB ? uA : uB;
+    const chosenF = scoreA >= scoreB ? fA : fB;
+
+    const armAngle = clamp(wrapAngle(chosenU - restUpper - pose.torsoAngle), -2.45, 2.45);
+    const elbowAngle = clamp(wrapAngle((chosenF - restForearm) - (chosenU - restUpper)), -2.35, 2.35);
+    return { armAngle, elbowAngle };
+  }
+
+  function resetPoseKinematics(): void {
+    const netVerticalY = pose.bodyBounceY + pose.crouchDepth - pose.jumpHeight;
+    prevPoseKinematics.torsoX = pose.hipSwayX;
+    prevPoseKinematics.torsoY = netVerticalY;
+    prevPoseKinematics.torsoVx = 0;
+    prevPoseKinematics.torsoVy = 0;
+    prevPoseKinematics.headX = pose.headOffX + pose.hipSwayX;
+    prevPoseKinematics.headY = pose.headOffY + netVerticalY;
+    prevPoseKinematics.headVx = 0;
+    prevPoseKinematics.headVy = 0;
+    prevPoseKinematics.hipX = pose.hipSwayX;
+    prevPoseKinematics.hipY = netVerticalY;
+    prevPoseKinematics.hipVx = 0;
+    prevPoseKinematics.hipVy = 0;
+  }
 
   function setCustomRigPose(rigPose: AvatarRigPose | null): void {
     state.customRigPose = rigPose;
     state.customRigTime = 0;
     state.customRigDuration = rigPose ? (rigPose.durationSec ?? 2.8) : 0;
+    emitSnapshot(true);
+  }
+
+  function setManualRigPose(rigPose: AvatarRigPose | null): void {
+    state.manualRigPose = rigPose;
     emitSnapshot(true);
   }
 
@@ -1988,7 +2532,7 @@ export function createPixelAvatarEngine(
    */
   function stepAnimations(dt: number): void {
     if (!state.animationsEnabled) {
-      const k = Math.min(1, 10 * dt);
+      const k = 1 - Math.exp(-12 * dt);
       pose.bodyBounceY = lerp(pose.bodyBounceY, 0, k);
       pose.hipSwayX = lerp(pose.hipSwayX, 0, k);
       pose.crouchDepth = lerp(pose.crouchDepth, 0, k);
@@ -2593,16 +3137,17 @@ export function createPixelAvatarEngine(
         break;
       }
       case 'thumbs_up': {
-        // Right arm lifts & elbow bends forward presenting a crisp Thumbs-Up gesture!
-        tHipSwayX += 3.2 * env;
-        tTorsoAngle -= 0.04 * env;
+        // Right arm extends slightly outward and elbow bends crisply UP presenting a super clear Thumbs-Up!
+        tHipSwayX += 3.0 * env;
+        tTorsoAngle -= 0.036 * env;
         tHeadAngle += 0.11 * env;
-        tArmLAngle += 0.05 * env;
-        tElbowLAngle -= 1.25 * env;
-        tArmRAngle += 0.35 * env;
-        tElbowRAngle += 2.48 * env;
-        tWristRAngle -= 0.15 * env;
-        tArmLiftY -= 2.5 * env;
+        tArmLAngle += 0.08 * env;
+        tElbowLAngle -= 1.18 * env;
+        tHandLGesture = 'fist';
+        tArmRAngle -= 0.32 * env;
+        tElbowRAngle -= 1.62 * env;
+        tWristRAngle += 0.12 * env;
+        tArmLiftY -= 1.6 * env;
         tHandRGesture = 'thumbs_up';
         tSideArmAngle -= 0.55 * env;
         tSideElbowAngle -= 0.95 * env;
@@ -2771,26 +3316,183 @@ export function createPixelAvatarEngine(
         tMouthShape = 'smile';
         break;
       }
+      case 'heart_hands': {
+        // Both arms curve gently inward & forearms fold up to form a sweet double finger-heart!
+        tHipSwayX += Math.sin(at * 3.2) * 2.2 * env;
+        tTorsoAngle -= 0.03 * env;
+        tHeadAngle += 0.12 * env;
+        tArmLAngle -= 0.48 * env;
+        tElbowLAngle -= 1.92 * env;
+        tArmRAngle += 0.48 * env;
+        tElbowRAngle += 1.92 * env;
+        tArmLiftY -= 2.2 * env;
+        tHandLGesture = 'heart_pinch';
+        tHandRGesture = 'heart_pinch';
+        tSideArmAngle -= 0.42 * env;
+        tSideElbowAngle -= 1.25 * env;
+        tMouthShape = 'smile';
+        break;
+      }
+      case 'salute': {
+        // Crisp playful gothic salute: right hand brought right up to temple, left hand on hip!
+        tHipSwayX -= 2.4 * env;
+        tTorsoAngle -= 0.035 * env;
+        tHeadAngle -= 0.06 * env;
+        tArmLAngle += 0.12 * env;
+        tElbowLAngle -= 1.22 * env;
+        tHandLGesture = 'fist';
+        tArmRAngle -= 0.88 * env;
+        tElbowRAngle -= 2.08 * env;
+        tWristRAngle -= 0.15 * env;
+        tHandRGesture = 'kiss_hand';
+        tArmLiftY -= 1.8 * env;
+        tSideArmAngle -= 0.72 * env;
+        tSideElbowAngle -= 1.55 * env;
+        tEyeOpenR = 1 - 0.92 * sinEnv;
+        tMouthShape = 'smile';
+        break;
+      }
+      case 'cat_paws': {
+        // Playful curled cat-paw hands bouncing rhythmically in front of chest!
+        const pawBounce = Math.sin(at * 11.5);
+        tHipSwayX += pawBounce * 2.8 * env;
+        tCrouchDepth += Math.abs(pawBounce) * 3.5 * env;
+        tHeadAngle += (0.11 + pawBounce * 0.06) * env;
+        tArmLAngle -= 0.46 * env;
+        tElbowLAngle -= (2.05 + pawBounce * 0.16) * env;
+        tArmRAngle += 0.46 * env;
+        tElbowRAngle += (2.05 - pawBounce * 0.16) * env;
+        tWristLAngle += 0.35 * env;
+        tWristRAngle -= 0.35 * env;
+        tHandLGesture = 'fist';
+        tHandRGesture = 'fist';
+        tFingerCurlL = 0.78;
+        tFingerCurlR = 0.78;
+        tArmLiftY -= 2.0 * env;
+        tMouthShape = 'smile';
+        break;
+      }
+      case 'tickled': {
+        // Energetic squirming giggle when tickled by the gothic feather!
+        const squirm = Math.sin(at * 22);
+        const hop = Math.abs(Math.cos(at * 15));
+        tHipSwayX += squirm * 4.4 * env;
+        tCrouchDepth += hop * 5.2 * env;
+        tTorsoAngle += squirm * 0.068 * env;
+        tHeadAngle -= squirm * 0.14 * env;
+        tHeadOffY += 1.2 * env;
+        tArmLAngle -= (0.45 + squirm * 0.18) * env;
+        tElbowLAngle -= (1.75 - squirm * 0.22) * env;
+        tArmRAngle += (0.45 - squirm * 0.18) * env;
+        tElbowRAngle += (1.75 + squirm * 0.22) * env;
+        tHandLGesture = 'wave_spread';
+        tHandRGesture = 'wave_spread';
+        tEyeOpenL = 0.12;
+        tEyeOpenR = 0.12;
+        tMouthShape = 'open';
+        tMouthOpen = (0.48 + hop * 0.28) * env;
+        break;
+      }
+      case 'shy_fingers': {
+        // Classic shy index-fingers poking together in front of chest!
+        const tap = Math.sin(at * 9.5) * 0.09;
+        tCrouchDepth += 3.8 * env;
+        tTorsoAngle += 0.025 * env;
+        tHeadAngle += 0.12 * env;
+        tHeadOffY += 1.3 * env;
+        tArmLAngle -= 0.56 * env;
+        tElbowLAngle -= (1.78 + tap) * env;
+        tArmRAngle += 0.56 * env;
+        tElbowRAngle += (1.78 + tap) * env;
+        tHandLGesture = 'point';
+        tHandRGesture = 'point';
+        tEyeLookX = -0.7;
+        tEyeLookY = -0.35;
+        tMouthShape = 'pout';
+        break;
+      }
+      case 'music_sway': {
+        const waltz = Math.sin(t * 2.6);
+        const rise = Math.cos(t * 2.6);
+        tHipSwayX += waltz * 4.6;
+        tTorsoAngle += waltz * 0.048;
+        tCrouchDepth += (1 - rise) * 2.4;
+        tHeadAngle -= waltz * 0.095;
+        tArmLAngle += 0.34 + waltz * 0.22;
+        tElbowLAngle -= 0.85 - rise * 0.25;
+        tArmRAngle -= 0.34 - waltz * 0.22;
+        tElbowRAngle += 0.85 + rise * 0.25;
+        tHandLGesture = 'kiss_hand';
+        tHandRGesture = 'kiss_hand';
+        tSideArmAngle += waltz * 0.22;
+        tSideElbowAngle -= 0.65;
+        tMouthShape = 'smile';
+        break;
+      }
+      case 'rose_blush': {
+        // Receiving a gothic rose: hands clasped gently near heart, soft joyful head tilt!
+        tHipSwayX += Math.sin(u * Math.PI * 2) * 2.8 * env;
+        tTorsoAngle -= 0.032 * env;
+        tHeadAngle += 0.13 * env;
+        tHeadOffY += 0.9 * env;
+        tArmLAngle -= 0.45 * env;
+        tElbowLAngle -= 1.85 * env;
+        tArmRAngle += 0.45 * env;
+        tElbowRAngle += 1.85 * env;
+        tHandLGesture = 'kiss_hand';
+        tHandRGesture = 'kiss_hand';
+        tEyeOpenL = 0.25;
+        tEyeOpenR = 0.25;
+        tMouthShape = 'smile';
+        break;
+      }
       default:
         break;
     }
 
+    // Continuous gentle waltz when Music Box is active and idle
+    if (state.musicBoxEnabled && state.currentAnim === 'idle') {
+      const waltz = Math.sin(t * 2.6);
+      const rise = Math.cos(t * 2.6);
+      tHipSwayX += waltz * 4.2;
+      tTorsoAngle += waltz * 0.042;
+      tCrouchDepth += (1 - rise) * 2.1;
+      tHeadAngle -= waltz * 0.085;
+      tArmLAngle += 0.32 + waltz * 0.2;
+      tElbowLAngle -= 0.78 - rise * 0.22;
+      tArmRAngle -= 0.32 - waltz * 0.2;
+      tElbowRAngle += 0.78 + rise * 0.22;
+      tHandLGesture = 'kiss_hand';
+      tHandRGesture = 'kiss_hand';
+      tMouthShape = 'smile';
+    }
+
+    // Apply Expressiveness personality multiplier on animation deviations
+    if (state.currentAnim !== 'idle' && state.expressiveness !== 1) {
+      const exp = clamp(state.expressiveness, 0.55, 1.35);
+      tHipSwayX *= exp;
+      tTorsoAngle *= exp;
+      tHeadAngle *= exp;
+    }
+
     // ---- DIRECT AI / USER 2D RIG POSE OVERRIDES (controls ANY individual body part at will!) ----
-    if (state.customRigPose) {
-      const rp = state.customRigPose;
-      const ru = state.customRigDuration > 0 ? clamp(state.customRigTime / state.customRigDuration, 0, 1) : 0.5;
-      const rEnv = state.customRigDuration > 0 ? smoothstep(0, 0.14, ru) * smoothstep(1, 0.84, ru) : 1;
+    const activeRig = state.manualRigPose ?? state.customRigPose;
+    if (activeRig) {
+      const rp = activeRig;
+      const isManual = Boolean(state.manualRigPose);
+      const ru = !isManual && state.customRigDuration > 0 ? clamp(state.customRigTime / state.customRigDuration, 0, 1) : 0.5;
+      const rEnv = !isManual && state.customRigDuration > 0 ? smoothstep(0, 0.14, ru) * smoothstep(1, 0.84, ru) : 1;
 
       if (typeof rp.hipSway === 'number') tHipSwayX = lerp(tHipSwayX, rp.hipSway * 6.5, rEnv);
       if (typeof rp.torsoTilt === 'number') tTorsoAngle = lerp(tTorsoAngle, rp.torsoTilt * 0.085, rEnv);
       if (typeof rp.torsoLeanY === 'number') tTorsoOffY = lerp(tTorsoOffY, rp.torsoLeanY * 2.2, rEnv);
-      if (typeof rp.crouch === 'number') tCrouchDepth = lerp(tCrouchDepth, clamp(rp.crouch, 0, 1) * 25.0, rEnv);
+      if (typeof rp.crouch === 'number') tCrouchDepth = lerp(tCrouchDepth, clamp(rp.crouch, 0, 1) * 22.0, rEnv);
       if (typeof rp.jump === 'number') {
-        const jCurve = state.customRigDuration > 0 ? Math.sin(ru * Math.PI) : clamp(rp.jump, 0, 1);
-        tJumpHeight = lerp(tJumpHeight, clamp(rp.jump, 0, 1) * 22.0 * jCurve, rEnv);
+        const jCurve = !isManual && state.customRigDuration > 0 ? Math.sin(ru * Math.PI) : clamp(rp.jump, 0, 1);
+        tJumpHeight = lerp(tJumpHeight, clamp(rp.jump, 0, 1) * 14.5 * jCurve, rEnv);
       }
-      if (typeof rp.legLiftL === 'number') tLegLiftL = lerp(tLegLiftL, clamp(rp.legLiftL, 0, 1) * 18.0, rEnv);
-      if (typeof rp.legLiftR === 'number') tLegLiftR = lerp(tLegLiftR, clamp(rp.legLiftR, 0, 1) * 18.0, rEnv);
+      if (typeof rp.legLiftL === 'number') tLegLiftL = lerp(tLegLiftL, clamp(rp.legLiftL, 0, 1) * 16.0, rEnv);
+      if (typeof rp.legLiftR === 'number') tLegLiftR = lerp(tLegLiftR, clamp(rp.legLiftR, 0, 1) * 16.0, rEnv);
 
       // Left Arm (symmetric rig coordinates: +shoulderL = raise out/up, -shoulderL = bring elbow inward)
       if (typeof rp.shoulderL === 'number') tArmLAngle = lerp(tArmLAngle, rp.shoulderL * 1.1, rEnv);
@@ -2825,20 +3527,59 @@ export function createPixelAvatarEngine(
       if (typeof rp.mouthOpen === 'number') tMouthOpen = lerp(tMouthOpen, clamp(rp.mouthOpen, 0, 1), rEnv);
     }
 
-    // Clamp offsets to safe anatomical limits so joints NEVER detach or tear
+    // ---- DIRECT CANVAS INTERACTIVE 2-BONE IK ARM/HAND GRAB & WAIST SWAY ----
+    if (pointer.draggingArm) {
+      if (pointer.draggingArm === 'side') {
+        const ik = solveArmIK(1, pointer.x, pointer.y, true);
+        tSideArmAngle = ik.armAngle;
+        tSideElbowAngle = ik.elbowAngle;
+        tHandRGesture = 'heart_pinch';
+        tFingerCurlR = 0.28;
+        tHeadAngle = clamp((pointer.y - SKEL.eyeY) * 0.0018, -0.14, 0.14);
+        tMouthShape = 'smile';
+      } else {
+        const grabSide: -1 | 1 = pointer.draggingArm === 'left' ? -1 : 1;
+        const ik = solveArmIK(grabSide, pointer.x, pointer.y, false);
+        const pullLean = clamp((pointer.x - (CX + grabSide * 62)) / 130, -1, 1);
+        tTorsoAngle += pullLean * 0.055;
+        tHipSwayX += pullLean * 3.8;
+        tHeadAngle = lerp(tHeadAngle, clamp((pointer.x - CX) / 100, -1, 1) * 0.14, 0.78);
+        tEyeLookX = clamp((pointer.x - CX) / 90, -1, 1);
+        tEyeLookY = clamp((pointer.y - SKEL.eyeY) / 110, -1, 1);
+        tMouthShape = 'smile';
+        if (grabSide === -1) {
+          tArmLAngle = ik.armAngle;
+          tElbowLAngle = ik.elbowAngle;
+          tHandLGesture = 'heart_pinch';
+          tFingerCurlL = 0.25;
+        } else {
+          tArmRAngle = ik.armAngle;
+          tElbowRAngle = ik.elbowAngle;
+          tHandRGesture = 'heart_pinch';
+          tFingerCurlR = 0.25;
+        }
+      }
+    } else if (pointer.draggingWaist) {
+      tHipSwayX += clamp(pointer.waistSwayPullX, -11, 11);
+      tTorsoAngle += clamp(pointer.waistSwayPullX * 0.0075, -0.085, 0.085);
+      tCrouchDepth += clamp(pointer.waistPullY * 0.55, 0, 14);
+      tHeadAngle -= clamp(pointer.waistSwayPullX * 0.009, -0.12, 0.12);
+    }
+
+    // Clamp offsets to safe anatomical limits so joints NEVER detach, tear, or clip top hair horn!
     tTorsoOffX = clamp(tTorsoOffX, -1.6, 1.6);
-    tTorsoOffY = clamp(tTorsoOffY, -2.4, 2.2);
+    tTorsoOffY = clamp(tTorsoOffY, -2.2, 2.2);
     tHeadOffX = clamp(tHeadOffX, -2.2, 2.2);
-    tHeadOffY = clamp(tHeadOffY, -2.2, 2.2);
+    tHeadOffY = clamp(tHeadOffY, -2.0, 2.2);
     tTorsoAngle = clamp(tTorsoAngle, -0.095, 0.095);
     tHeadAngle = clamp(tHeadAngle, -0.18, 0.18);
-    tCrouchDepth = clamp(tCrouchDepth, 0, 26);
-    tJumpHeight = clamp(tJumpHeight, 0, 26);
-    tLegLiftL = clamp(tLegLiftL, 0, 20);
-    tLegLiftR = clamp(tLegLiftR, 0, 20);
+    tCrouchDepth = clamp(tCrouchDepth, 0, 22);
+    tJumpHeight = clamp(tJumpHeight, 0, 15);
+    tLegLiftL = clamp(tLegLiftL, 0, 18);
+    tLegLiftR = clamp(tLegLiftR, 0, 18);
 
-    // Smoothly track target pose
-    const blend = Math.min(1, 14 * dt);
+    // Frame-rate-independent exponential smoothing (silky smooth at 60Hz, 120Hz & 144Hz!)
+    const blend = 1 - Math.exp(-(pointer.draggingArm ? 24 : 15) * dt);
     pose.bodyBounceY = lerp(pose.bodyBounceY, tBounceY, blend);
     pose.hipSwayX = lerp(pose.hipSwayX, tHipSwayX, blend);
     pose.crouchDepth = lerp(pose.crouchDepth, tCrouchDepth, blend);
@@ -2954,10 +3695,17 @@ export function createPixelAvatarEngine(
 
   const cube = { x: 46, y: 145, vx: 0, vy: 0, size: 22, dragging: false, grabOffX: 0, grabOffY: 0, squash: 0, hitCooldown: 0 };
   const particles: Particle[] = [];
-  function spawnBurst(x: number, y: number, type: 'heart' | 'star' | 'crumb', count = 6): void {
+  function spawnBurst(x: number, y: number, type: 'heart' | 'star' | 'crumb' | 'note' | 'petal', count = 6): void {
     for (let i = 0; i < count; i++) {
-      const ang = -Math.PI * .5 + (Math.random() - .5) * 2.1, spd = 22 + Math.random() * 44;
-      particles.push({ x: x + (Math.random() - .5) * 10, y: y + (Math.random() - .5) * 10, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd - 12, life: .75 + Math.random() * .55, type });
+      const ang = -Math.PI * .5 + (Math.random() - .5) * 2.1, spd = 20 + Math.random() * 40;
+      particles.push({
+        x: x + (Math.random() - .5) * 14,
+        y: y + (Math.random() - .5) * 10,
+        vx: Math.cos(ang) * spd,
+        vy: Math.sin(ang) * spd - 12,
+        life: .85 + Math.random() * .65,
+        type,
+      });
     }
   }
 
@@ -2974,7 +3722,7 @@ export function createPixelAvatarEngine(
   }
 
   function addBlush(a: number): void {
-    state.blush = clamp(state.blush + a, .12, 1);
+    state.blush = clamp(state.blush + a * state.sensitivity, .12, 1);
     emitSnapshot(false);
   }
 
@@ -3022,10 +3770,26 @@ export function createPixelAvatarEngine(
   }
 
   function stepParticles(dt: number): void {
+    if (state.flashAlpha > 0) {
+      state.flashAlpha = Math.max(0, state.flashAlpha - dt * 3.4);
+    }
+    if (state.musicBoxEnabled) {
+      state.musicNoteTimer -= dt;
+      if (state.musicNoteTimer <= 0) {
+        state.musicNoteTimer = 0.52;
+        spawnBurst(CX + (Math.random() - 0.5) * 86, SKEL.shoulderY + (Math.random() - 0.5) * 40, 'note', 1);
+      }
+    }
     for (let i = particles.length - 1; i >= 0; i--) {
       const p = particles[i]; p.life -= dt; if (p.life <= 0) { particles.splice(i, 1); continue; }
       p.x += p.vx * dt; p.y += p.vy * dt;
-      if (p.type === 'heart') { p.vy -= 14 * dt; p.vx *= .96; } else if (p.type === 'crumb') p.vy += 125 * dt; else { p.vx *= .94; p.vy *= .94; }
+      if (p.type === 'heart' || p.type === 'note') {
+        p.vy -= 14 * dt; p.vx *= .96;
+        if (p.type === 'note') p.x += Math.sin(state.time * 5 + i) * 10 * dt;
+      } else if (p.type === 'petal') {
+        p.vy += 26 * dt; p.vx = Math.sin(state.time * 4 + i) * 18;
+      } else if (p.type === 'crumb') p.vy += 125 * dt;
+      else { p.vx *= .94; p.vy *= .94; }
     }
     if (state.eatAnim) {
       state.eatAnim.t += dt * 1.45;
@@ -3033,6 +3797,22 @@ export function createPixelAvatarEngine(
         state.eatAnim = null; addAffection(15); addBlush(.18); setMood('Feliz', 2.6);
         applyImpulse('hairBangs', 18, -14); applyImpulse('hairTop', -14, -18);
         spawnBurst(CX, SKEL.mouthY, 'crumb', 7); spawnBurst(CX, SKEL.headTopY + 12, 'heart', 6);
+        emitSnapshot(true);
+      }
+    }
+    if (state.roseAnim) {
+      state.roseAnim.t += dt * 1.35;
+      if (state.roseAnim.t >= 1) {
+        state.roseAnim = null;
+        addAffection(14);
+        addBlush(.24);
+        setMood('Mimada', 3.4);
+        triggerAnimation('rose_blush', 2.5);
+        applyImpulse('hairBangs', 20, -16);
+        applyImpulse('bustL', -18, -68);
+        applyImpulse('bustR', 18, -68);
+        spawnBurst(CX, SKEL.bustTopY + 10, 'petal', 9);
+        spawnBurst(CX, SKEL.headTopY + 12, 'heart', 7);
         emitSnapshot(true);
       }
     }
@@ -3109,18 +3889,84 @@ export function createPixelAvatarEngine(
 
   const onPointerDown = (e: PointerEvent): void => {
     const p = getLogicalCoords(e); pointer.x = p.x; pointer.y = p.y; pointer.down = true; pointer.inside = true;
-    pointer.draggingZipper = false; pointer.draggingSkirt = false;
+    pointer.draggingZipper = false; pointer.draggingSkirt = false; pointer.draggingArm = null; pointer.draggingWaist = false;
     if (!hintDismissed) { hintDismissed = true; emitSnapshot(true); }
     if (state.cubeEnabled && Math.abs(p.x - cube.x) <= cube.size * .65 && Math.abs(p.y - cube.y) <= cube.size * .65) {
       cube.dragging = true; cube.grabOffX = cube.x - p.x; cube.grabOffY = cube.y - p.y; cube.vx = 0; cube.vy = 0; canvas.setPointerCapture(e.pointerId); return;
     }
     const z = planes.dynamicHitZone[(p.y | 0) * W + (p.x | 0)]; pointer.activeZone = z;
     if (z === 11 && state.view === 'front' && state.suit !== 'none') { pointer.draggingZipper = true; canvas.setPointerCapture(e.pointerId); return; }
+    if (z === 12 && state.view === 'front' && state.bra) {
+      const nextSlip: StrapSlipState = state.strapSlip === 'none' ? 'left' : (state.strapSlip === 'left' ? 'both' : 'none');
+      state.strapSlip = nextSlip;
+      rebuildLingerieAndComposite();
+      addBlush(nextSlip === 'none' ? 0.04 : 0.14);
+      setMood(nextSlip === 'none' ? 'Tranquila' : 'Ruborizada', 2.4);
+      applyImpulse('bustL', -16, -64);
+      applyImpulse('bustR', 16, -64);
+      setCustomRigPose({
+        shoulderL: -0.58,
+        elbowL: -1.48,
+        handL: 'heart_pinch',
+        headTilt: nextSlip === 'none' ? 0.1 : -0.35,
+        mouthShape: nextSlip === 'none' ? 'smile' : 'open',
+        durationSec: 1.5,
+      });
+      spawnBurst(p.x, p.y, nextSlip === 'none' ? 'star' : 'heart', 4);
+      emitSnapshot(true);
+      emitInteraction('slip_strap', nextSlip);
+      canvas.setPointerCapture(e.pointerId);
+      return;
+    }
+    if (z === 13 && state.view === 'back' && state.bra) {
+      addBlush(0.2);
+      setMood('Sorprendida', 2.4);
+      triggerAnimation('surprised', 1.6);
+      applyImpulse('bustL', -24, -84);
+      applyImpulse('bustR', 24, -84);
+      applyImpulse('hairTop', -22, -26);
+      spawnBurst(p.x, p.y, 'star', 5);
+      emitSnapshot(true);
+      emitInteraction('bra_clasp', 'broche trasero');
+      canvas.setPointerCapture(e.pointerId);
+      return;
+    }
+    if (z === 14 && state.stockings) {
+      addBlush(0.12);
+      addAffection(2.2);
+      setMood('Ruborizada', 2.2);
+      triggerAnimation('shy', 1.7);
+      applyImpulse(p.x < CX ? 'gluteL' : 'gluteR', p.x < CX ? -22 : 22, -62);
+      spawnBurst(p.x, p.y, 'heart', 4);
+      emitSnapshot(true);
+      emitInteraction('tug_garter', state.garters ? 'liguero' : 'media');
+      canvas.setPointerCapture(e.pointerId);
+      return;
+    }
+    if (z === 15 || z === 16) {
+      pointer.draggingArm = state.view === 'side' ? 'side' : (z === 15 ? 'left' : 'right');
+      addAffection(1.5);
+      addBlush(0.06);
+      setMood('Mimada', 2.0);
+      spawnBurst(p.x, p.y - 4, 'heart', 2);
+      emitSnapshot(true);
+      canvas.setPointerCapture(e.pointerId);
+      return;
+    }
     if (z === 10) {
       pointer.draggingSkirt = true; applyImpulse(p.x < CX ? 'skirtL' : 'skirtR', p.x < CX ? -22 : 22, -42); addBlush(.09); setMood('Sorprendida', 1.3);
       triggerAnimation('shy', 1.5);
       emitInteraction('pull_skirt', state.suit === 'maid' ? 'falda' : 'faja de seda');
       canvas.setPointerCapture(e.pointerId); return;
+    }
+    if (z === 9 && !state.featherEnabled) {
+      pointer.draggingWaist = true;
+      pointer.waistGrabStartX = p.x;
+      pointer.waistGrabStartY = p.y;
+      pointer.waistSwayPullX = 0;
+      pointer.waistPullY = 0;
+      canvas.setPointerCapture(e.pointerId);
+      return;
     }
     if (z >= 1 && z <= 7) applyHandContact(p.x, p.y, z, true);
     else if (z === 8) {
@@ -3139,6 +3985,7 @@ export function createPixelAvatarEngine(
     let zLabel = ZONE_NAMES[z] || '—';
     if (state.view === 'side' && z === 1) zLabel = 'Busto (Lateral)';
     if (state.view === 'side' && z === 3) zLabel = 'Glúteos (Lateral)';
+    if (state.view === 'side' && (z === 15 || z === 16)) zLabel = 'Brazo / Mano (Arrastra)';
     if (z === 10) zLabel = state.suit === 'maid' ? 'Falda / Delantal' : 'Faja de Seda';
     if (zLabel !== currentZoneLabel) {
       currentZoneLabel = zLabel;
@@ -3146,6 +3993,25 @@ export function createPixelAvatarEngine(
     }
 
     if (cube.dragging) { cube.x = clamp(p.x + cube.grabOffX, 12, W - 12); cube.y = clamp(p.y + cube.grabOffY, 12, H - 24); cube.vx = pointer.vx * .7; cube.vy = pointer.vy * .7; return; }
+    if (pointer.draggingArm) {
+      // Gentle reactive bust & hair bounce when moving her arm playfully!
+      if (Math.hypot(dx, dy) > 2.2) {
+        applyImpulse(pointer.draggingArm === 'left' ? 'bustL' : 'bustR', clamp(pointer.vx * 0.08, -18, 18), clamp(pointer.vy * 0.08, -18, 18));
+        applyImpulse('hairBangs', clamp(pointer.vx * 0.06, -14, 14), clamp(pointer.vy * 0.05, -12, 12));
+      }
+      return;
+    }
+    if (pointer.draggingWaist) {
+      pointer.waistSwayPullX = clamp((p.x - pointer.waistGrabStartX) * 0.34, -11, 11);
+      pointer.waistPullY = clamp((p.y - pointer.waistGrabStartY) * 0.32, 0, 14);
+      if (Math.hypot(dx, dy) > 1.8) {
+        applyImpulse('gluteL', clamp(pointer.vx * 0.09, -22, 22), clamp(pointer.vy * 0.09, -22, 22));
+        applyImpulse('gluteR', clamp(pointer.vx * 0.09, -22, 22), clamp(pointer.vy * 0.09, -22, 22));
+        applyImpulse('skirtL', clamp(pointer.vx * 0.16, -32, 32), clamp(pointer.vy * 0.14, -28, 28));
+        applyImpulse('skirtR', clamp(pointer.vx * 0.16, -32, 32), clamp(pointer.vy * 0.14, -28, 28));
+      }
+      return;
+    }
     if (pointer.draggingZipper) {
       const nz = Math.round(clamp((p.y - (SKEL.neckMidY + 5 + pose.torsoOffY + pose.bodyBounceY)) / Math.max(1, SKEL.waistY - SKEL.neckMidY - 3), 0, 1) * 100);
       if (nz !== state.zipper) {
@@ -3161,15 +4027,35 @@ export function createPixelAvatarEngine(
       if (dy < -1.5) { addBlush(.025); setMood('Ruborizada', 1.5); }
       return;
     }
-    if (pointer.down) {
-      const hitZ = z !== 0 ? z : pointer.activeZone;
-      if (hitZ >= 1 && hitZ <= 7 && z >= 1 && z <= 7) applyHandContact(p.x, p.y, z, false);
-      else if (z === 8) {
-        pointer.petAccum += Math.hypot(dx, dy);
-        if (pointer.petAccum > 14) {
-          pointer.petAccum = 0; addAffection(2.2); addBlush(.09); setMood('Mimada', 2); spawnBurst(p.x, p.y - 8, 'heart', 2);
-          triggerAnimation('petted', 1.8);
-          emitInteraction('pet_face', 'rostro');
+    if (pointer.down || (state.featherEnabled && z > 0 && Math.hypot(dx, dy) > 1.8)) {
+      // Gothic Tickle Feather mode works on hover/brush or drag!
+      if (state.featherEnabled && z > 0) {
+        pointer.petAccum += Math.hypot(dx, dy) * 1.45;
+        if (pointer.petAccum > 18) {
+          pointer.petAccum = 0;
+          addAffection(2.4);
+          addBlush(.11);
+          setMood('Juguetona', 2.1);
+          triggerAnimation('tickled', 1.6);
+          applyImpulse('bustL', -22, -74);
+          applyImpulse('bustR', 22, -74);
+          applyImpulse('hairBangs', 24, -18);
+          spawnBurst(p.x, p.y - 6, 'star', 3);
+          spawnBurst(CX, SKEL.headTopY + 14, 'heart', 2);
+          emitInteraction('tickle', ZONE_NAMES[z] || 'cuerpo');
+        }
+        return;
+      }
+      if (pointer.down) {
+        const hitZ = z !== 0 ? z : pointer.activeZone;
+        if (hitZ >= 1 && hitZ <= 7 && z >= 1 && z <= 7) applyHandContact(p.x, p.y, z, false);
+        else if (z === 8) {
+          pointer.petAccum += Math.hypot(dx, dy);
+          if (pointer.petAccum > 14) {
+            pointer.petAccum = 0; addAffection(2.2); addBlush(.09); setMood('Mimada', 2); spawnBurst(p.x, p.y - 8, 'heart', 2);
+            triggerAnimation('petted', 1.8);
+            emitInteraction('pet_face', 'rostro');
+          }
         }
       }
     }
@@ -3177,6 +4063,22 @@ export function createPixelAvatarEngine(
 
   const onPointerUp = (e: PointerEvent): void => {
     if (cube.dragging) cube.dragging = false;
+    else if (pointer.draggingArm) {
+      const sideLabel = pointer.draggingArm === 'left' ? 'mano izquierda' : (pointer.draggingArm === 'right' ? 'mano derecha' : 'mano');
+      pointer.draggingArm = null;
+      applyImpulse('bustL', -14, -44);
+      applyImpulse('bustR', 14, -44);
+      applyImpulse('hairBangs', clamp(pointer.vx * 0.14, -26, 26), -18);
+      spawnBurst(pointer.x, pointer.y - 4, 'heart', 3);
+      emitInteraction('hold_hand', sideLabel);
+    }
+    else if (pointer.draggingWaist) {
+      pointer.draggingWaist = false;
+      pointer.waistSwayPullX = 0;
+      pointer.waistPullY = 0;
+      applyImpulse('gluteL', clamp(pointer.vx * 0.22, -48, 48), -42);
+      applyImpulse('gluteR', clamp(pointer.vx * 0.22, -48, 48), -42);
+    }
     else if (pointer.draggingZipper) {
       pointer.draggingZipper = false; applyImpulse('bustL', -14, 18); applyImpulse('bustR', 14, 18);
       emitInteraction('zipper', `${state.zipper}%`);
@@ -3294,16 +4196,25 @@ export function createPixelAvatarEngine(
       pose.mouthShape === 'smile' ||
       state.mood === 'Feliz' ||
       state.mood === 'Mimada' ||
+      state.mood === 'Juguetona' ||
       state.currentAnim === 'happy' ||
       state.currentAnim === 'petted' ||
       state.currentAnim === 'cheer' ||
-      state.currentAnim === 'wave_hand';
+      state.currentAnim === 'wave_hand' ||
+      state.currentAnim === 'heart_hands' ||
+      state.currentAnim === 'tickled' ||
+      state.currentAnim === 'cat_paws';
     const isSurp =
       pose.eyeOpenL > 1.15 ||
       pose.eyeOpenR > 1.15 ||
       state.mood === 'Sorprendida' ||
       state.currentAnim === 'surprised';
-    const isShy = state.currentAnim === 'shy' || state.currentAnim === 'peekaboo' || state.currentAnim === 'shiver';
+    const isShy =
+      state.currentAnim === 'shy' ||
+      state.currentAnim === 'peekaboo' ||
+      state.currentAnim === 'shiver' ||
+      state.currentAnim === 'shy_fingers' ||
+      state.currentAnim === 'rose_blush';
     const isPout = pose.mouthShape === 'pout' || pose.browTilt > 0.35 || state.currentAnim === 'pout';
     const isKiss =
       pose.mouthShape === 'kiss' ||
@@ -3312,6 +4223,7 @@ export function createPixelAvatarEngine(
     const isWinkR =
       (pose.eyeOpenR < 0.35 && pose.eyeOpenL >= 0.5) ||
       state.currentAnim === 'wink' ||
+      (state.mood === 'Traviesa' && state.currentAnim === 'idle' && Math.sin(state.time * 1.4) > 0.85) ||
       (state.currentAnim === 'blow_kiss' && state.animTime > 0.25 && state.animTime < 1.35) ||
       (state.currentAnim === 'tease' && state.animTime > 0.45 && state.animTime < 1.25);
     const bothEyesClosed = pose.eyeOpenL < 0.35 && pose.eyeOpenR < 0.35;
@@ -3416,20 +4328,35 @@ export function createPixelAvatarEngine(
     cxL: number, cyL: number, cxR: number, cyR: number,
     zMin: number, zMax: number, isGlute: boolean,
     baseOffX: number, baseOffY: number,
+    rotAngle: number = 0,
+    rotPivotX: number = CX,
+    rotPivotY: number = SKEL.bustCenterY,
   ): void {
     const mat = SUIT_MATERIALS[state.suit], hasSuit = state.suit !== 'none', cSlipL = springs.clothSlipL, cSlipR = springs.clothSlipR;
     const spread = Math.max(0, springs.lapelSpread.x), clothLag = Math.hypot(sL.x - sL.cx, sL.y - sL.cy) + Math.hypot(sR.x - sR.cx, sR.y - sR.cy) + Math.hypot(cSlipL.x, cSlipL.y) + Math.hypot(cSlipR.x, cSlipR.y);
-    const minX = Math.max(0, (x0 + baseOffX - 4) | 0), maxX = Math.min(W - 1, (x1 + baseOffX + 4) | 0);
-    const minY = Math.max(0, (y0 + baseOffY - 4) | 0), maxY = Math.min(H - 1, (y1 + baseOffY + 4) | 0);
+    const minX = Math.max(0, (x0 + baseOffX - 6) | 0), maxX = Math.min(W - 1, (x1 + baseOffX + 6) | 0);
+    const minY = Math.max(0, (y0 + baseOffY - 6) | 0), maxY = Math.min(H - 1, (y1 + baseOffY + 6) | 0);
     const zipTipY = SKEL.neckMidY + 5 + (state.zipper / 100) * (SKEL.waistY - SKEL.neckMidY - 5) + baseOffY;
+    const hasRot = Math.abs(rotAngle) > 0.002;
+    const cosR = hasRot ? Math.cos(rotAngle) : 1;
+    const sinR = hasRot ? Math.sin(rotAngle) : 0;
+    const dstRotX = rotPivotX + baseOffX;
+    const dstRotY = rotPivotY + baseOffY;
 
     for (let y = minY; y <= maxY; y++) {
       const row = y * W;
-      const ly = Math.round(y - baseOffY);
-      if (ly < 0 || ly >= H) continue;
+      const dRotY = y - dstRotY;
       for (let x = minX; x <= maxX; x++) {
-        const lx = Math.round(x - baseOffX);
-        if (lx < 0 || lx >= W) continue;
+        let lx: number, ly: number;
+        if (hasRot) {
+          const dRotX = x - dstRotX;
+          lx = Math.round(rotPivotX + dRotX * cosR + dRotY * sinR);
+          ly = Math.round(rotPivotY - dRotX * sinR + dRotY * cosR);
+        } else {
+          lx = Math.round(x - baseOffX);
+          ly = Math.round(y - baseOffY);
+        }
+        if (lx < 0 || lx >= W || ly < 0 || ly >= H) continue;
         const lIdx = ly * W + lx;
         const wL = planes.softWeightL[lIdx], wR = planes.softWeightR[lIdx];
         if (wL === 0 && wR === 0) continue;
@@ -3474,6 +4401,17 @@ export function createPixelAvatarEngine(
           let z = isGlute ? (lx < CX ? 3 : 4) : (lx < CX ? 1 : 2);
           if (state.view === 'side') z = isGlute ? 3 : 1;
           if (!isGlute && state.view === 'front' && hasSuit && Math.hypot(x - (CX + baseOffX), y - zipTipY) <= 9) z = 11;
+          else if (
+            !isGlute &&
+            state.view === 'front' &&
+            state.bra &&
+            (!hasSuit || state.zipper > 65) &&
+            ly >= SKEL.bustTopY - 4 &&
+            ly <= SKEL.bustTopY + 19 &&
+            (Math.abs(lx - (CX - 18)) <= 6 || Math.abs(lx - (CX + 18)) <= 6)
+          ) {
+            z = 12;
+          }
           planes.dynamicHitZone[dstIdx] = z;
         }
       }
@@ -3578,12 +4516,24 @@ export function createPixelAvatarEngine(
       }
     }
 
-    const HEART = ['0110110', '1111111', '1111111', '0111110', '0011100', '0001000'], STAR = ['00100', '01110', '11111', '01110', '00100'];
+    const HEART = ['0110110', '1111111', '1111111', '0111110', '0011100', '0001000'];
+    const STAR = ['00100', '01110', '11111', '01110', '00100'];
+    const NOTE = ['00111', '00101', '00100', '01100', '11100', '01000'];
+    const PETAL = ['0110', '1111', '1110', '0100'];
     for (const p of particles) {
       const px = Math.round(p.x), py = Math.round(p.y);
-      if (p.type === 'heart') { const col = p.life > .35 ? PAL.cheek : PAL.cheekSoft; for (let r = 0; r < 6; r++) for (let c = 0; c < 7; c++) if (HEART[r][c] === '1') setPx(px + c - 3, py + r - 3, (r === 1 && c === 1) ? PAL.whitePure : col); }
-      else if (p.type === 'star') { for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++) if (STAR[r][c] === '1') setPx(px + c - 2, py + r - 2, (r === 2 && c === 2) ? PAL.whitePure : PAL.goldHi); }
-      else { setPx(px, py, PAL.cheekSoft); setPx(px + 1, py, PAL.goldHi); }
+      if (p.type === 'heart') {
+        const col = p.life > .35 ? PAL.cheek : PAL.cheekSoft;
+        for (let r = 0; r < 6; r++) for (let c = 0; c < 7; c++) if (HEART[r][c] === '1') setPx(px + c - 3, py + r - 3, (r === 1 && c === 1) ? PAL.whitePure : col);
+      } else if (p.type === 'star') {
+        for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++) if (STAR[r][c] === '1') setPx(px + c - 2, py + r - 2, (r === 2 && c === 2) ? PAL.whitePure : PAL.goldHi);
+      } else if (p.type === 'note') {
+        for (let r = 0; r < 6; r++) for (let c = 0; c < 5; c++) if (NOTE[r][c] === '1') setPx(px + c - 2, py + r - 3, r === 0 ? PAL.whitePure : PAL.lilacTrim);
+      } else if (p.type === 'petal') {
+        for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) if (PETAL[r][c] === '1') setPx(px + c - 2, py + r - 2, r === 0 ? PAL.cheekSoft : PAL.rosePetal);
+      } else {
+        setPx(px, py, PAL.cheekSoft); setPx(px + 1, py, PAL.goldHi);
+      }
     }
     if (state.eatAnim) {
       const t = state.eatAnim.t;
@@ -3595,8 +4545,38 @@ export function createPixelAvatarEngine(
       for (let dy = -3; dy <= 1; dy++) { const w = 5 - Math.max(0, -dy - 1); for (let dx = -w; dx <= w; dx++) setPx(x + dx, y + dy, (Math.abs(dx) === w || dy === -3) ? PAL.outline : cFrost); }
       setPx(x, y - 4, PAL.cheek); setPx(x + 1, y - 4, PAL.cheek); setPx(x, y - 5, PAL.whitePure);
     }
+    if (state.roseAnim) {
+      const t = state.roseAnim.t;
+      const targetX = CX + pose.hipSwayX;
+      const targetY = SKEL.bustTopY + 18 + pose.bodyBounceY;
+      const x = Math.round(lerp(W - 36, targetX, smoothstep(0, 1, t)));
+      const y = Math.round(lerp(195, targetY, smoothstep(0, 1, t)) - Math.sin(t * Math.PI) * 44);
+      // Pixel-art gothic crimson rose + green stem
+      for (let s = 2; s <= 10; s++) setPx(x - Math.floor(s * 0.4), y + s, PAL.roseStem);
+      setPx(x - 4, y + 6, PAL.roseStem); setPx(x - 5, y + 5, PAL.roseStem);
+      for (let dy = -4; dy <= 3; dy++) for (let dx = -4; dx <= 4; dx++) {
+        const d = Math.hypot(dx, dy);
+        if (d <= 3.8) setPx(x + dx, y + dy, d < 1.5 ? PAL.cheekSoft : (d > 3.1 ? PAL.outline : PAL.rosePetal));
+      }
+    }
 
-    if (state.handEnabled && pointer.inside && !cube.dragging) {
+    if (state.featherEnabled && pointer.inside && !cube.dragging) {
+      // Gothic purple & white tickle feather cursor
+      const fx = Math.round(pointer.x), fy = Math.round(pointer.y);
+      const wiggle = Math.round(Math.sin(state.time * 16) * 1.4);
+      for (let i = 0; i <= 14; i++) {
+        const cx = fx + i;
+        const cy = fy + i + (i < 6 ? wiggle : 0);
+        setPx(cx, cy, i < 10 ? PAL.whitePure : PAL.goldMid);
+        if (i < 11) {
+          const span = Math.round(Math.sin((i / 11) * Math.PI) * 4.2);
+          for (let s = 1; s <= span; s++) {
+            setPx(cx - s, cy + Math.floor(s * 0.35), (i + s) % 3 === 0 ? PAL.lidHi : PAL.lidBase);
+            setPx(cx + Math.floor(s * 0.35), cy - s, (i + s) % 3 === 0 ? PAL.whitePure : PAL.lilacTrim);
+          }
+        }
+      }
+    } else if (state.handEnabled && pointer.inside && !cube.dragging) {
       pointer.grip += ((pointer.down ? 1 : 0) - pointer.grip) * .32;
       const g = pointer.grip, hx = Math.round(pointer.x), hy = Math.round(pointer.y), curl = Math.round(g * 5);
       const cSkin = packRGBA(246, 224, 212), cShade = packRGBA(210, 178, 166), cHi = packRGBA(255, 245, 240);
@@ -3610,43 +4590,33 @@ export function createPixelAvatarEngine(
       const tx = hx - 11 + Math.round(g * 2), ty = hy + 4 + curl; fillR(tx - 1, ty - 1, 5, 6, PAL.outline); fillR(tx, ty, 3, 4, cSkin);
       if (state.pullFabric) for (const [dx, dy] of [[0, -12], [-1, -11], [1, -11], [0, -10]]) setPx(hx + dx, hy + dy + curl, PAL.goldHi);
     }
-  }
 
-  /**
-   * Draws a rounded shaded hinge joint cap at the elbow so upper arm & forearm bend at any angle with zero gaps!
-   */
-  function renderElbowBridgeJoint(elX: number, elY: number): void {
-    const isOrig = state.suit === 'original', isMarfil = state.suit === 'marfil', isMaid = state.suit === 'maid', hasSuit = state.suit !== 'none';
-    // Note: in Maid suit, the forearm at the elbow (y=142) is bare porcelain skin!
-    const useGloveMat = hasSuit && !isMaid;
-    const baseCol = !useGloveMat ? PAL.skinBase : (isMarfil ? PAL.ivoryBase : PAL.latexBase);
-    const hiCol = !useGloveMat ? PAL.skinHi : (isMarfil ? PAL.ivoryHi : PAL.latexMid);
-    const deepCol = !useGloveMat ? PAL.skinMid : (isMarfil ? PAL.ivoryDeep : PAL.latexDark);
-    const r = 6.2;
-    const x0 = Math.max(1, Math.floor(elX - r - 2)), x1 = Math.min(W - 2, Math.ceil(elX + r + 2));
-    const y0 = Math.max(1, Math.floor(elY - r - 2)), y1 = Math.min(H - 2, Math.ceil(elY + r + 2));
-    for (let y = y0; y <= y1; y++) {
-      const row = y * W;
-      for (let x = x0; x <= x1; x++) {
-        const dx = x - elX, dy = y - elY, d = Math.hypot(dx, dy);
-        if (d <= r) {
-          const lit = dx * -0.4 + dy * -0.4;
-          frameU32[row + x] = lit > 1.4 ? hiCol : (lit < -1.8 ? deepCol : baseCol);
-          planes.dynamicHitZone[row + x] = 9;
-        } else if (d <= r + 1.05 && frameU32[row + x] === bgBuf[row + x]) {
-          frameU32[row + x] = PAL.outline;
-        }
+    // Brief studio camera flash overlay when taking a photo!
+    if (state.flashAlpha > 0.02) {
+      const a = state.flashAlpha * 0.72;
+      for (let i = 0; i < PIXEL_COUNT; i++) {
+        const c = frameU32[i];
+        frameU32[i] = packRGBA(
+          lerp(unpackR(c), 255, a),
+          lerp(unpackG(c), 252, a),
+          lerp(unpackB(c), 255, a),
+        );
       }
     }
   }
 
   /**
-   * Procedural 2D Articulated Hand & 5 Individual Fingers (Thumb, Index, Middle, Ring, Pinky)
-   * Renders crisp outlined pixel-art capsules, glove/skin shading, white/gold fingertips, back-of-hand X emblem,
-   * and gothic claws for any wrist angle, finger curl, and hand gesture!
+   * UNIFIED 2-BONE ANALYTICAL SDF PIXEL-ART ARM + HAND + 5-FINGER RIG
+   * Eliminates ALL bitmap-slicing tears, elbow gaps, flat joint cuts, and detached outlines at ANY angle!
+   * Renders Shoulder Cap -> Upper Arm (with white/gold/lace bicep band) -> Seamless Rounded Elbow ->
+   * Forearm (with white/gold/lace wrist cuff) -> Palm -> 5 Articulated Fingers + White Tips + Gothic Claws!
    */
-  function renderArticulatedHandAndFingers(
+  function renderUnifiedArticulatedArm(
     side: -1 | 1,
+    shX: number,
+    shY: number,
+    elX: number,
+    elY: number,
     wrX: number,
     wrY: number,
     totalHandAngle: number,
@@ -3657,151 +4627,142 @@ export function createPixelAvatarEngine(
     const isOrig = state.suit === 'original';
     const isMarfil = state.suit === 'marfil';
     const isMaid = state.suit === 'maid';
-    const hasGlove = state.suit === 'original' || state.suit === 'marfil';
+    const hasSuit = state.suit !== 'none';
+    const hasSeparateGloves = !hasSuit && state.gloves;
+    const mat: MaterialKind = !hasSuit ? 'skin' : (isMarfil ? 'ivory' : isMaid ? 'velvet' : 'latex');
+    const bandHi = isMarfil ? PAL.goldHi : PAL.whitePure;
+    const bandSh = isMarfil ? PAL.goldMid : PAL.whiteShadow;
+    const tipCol = (isOrig || isMarfil || hasSeparateGloves) ? (isMarfil ? PAL.goldHi : PAL.whitePure) : PAL.skinHi;
+    const hasSlippedStrapOnArm =
+      !hasSuit &&
+      state.bra &&
+      !isSideView &&
+      (state.strapSlip === 'both' || (state.strapSlip === 'left' && side === -1));
 
-    const baseCol = hasGlove ? (isMarfil ? PAL.ivoryBase : PAL.latexBase) : PAL.skinBase;
-    const hiCol = hasGlove ? (isMarfil ? PAL.ivoryHi : PAL.latexSpec1) : PAL.skinHi;
-    const deepCol = hasGlove ? (isMarfil ? PAL.ivoryDeep : PAL.latexDark) : PAL.skinMid;
-    const tipCol = hasGlove ? (isMarfil ? PAL.goldHi : PAL.whitePure) : PAL.skinHi;
-    const xMarkCol = isMarfil ? PAL.goldHi : PAL.whitePure;
-
-    // Base resting orientation of the forearm/wrist axis
     const restAngle = isSideView ? Math.atan2(36, -14) : Math.atan2(34, side * 18);
     const theta = restAngle + totalHandAngle;
     const fx = Math.cos(theta), fy = Math.sin(theta);
-    // Outward lateral vector (from thumb side - toward pinky side +)
     const lx = side * Math.sin(theta), ly = -side * Math.cos(theta);
+    const toWorld = (f: number, l: number): [number, number] => [wrX + f * fx + l * lx, wrY + f * fy + l * ly];
 
-    const toWorld = (f: number, l: number): [number, number] => [
-      wrX + f * fx + l * lx,
-      wrY + f * fy + l * ly,
-    ];
-
-    interface HandCapsule {
+    interface LimbSeg {
+      kind: 'upper' | 'forearm' | 'palm' | 'finger';
       ax: number;
       ay: number;
       bx: number;
       by: number;
       r0: number;
       r1: number;
-      hasTip: boolean;
-      hasClaw: boolean;
-      isCurledKnuckle: boolean;
+      hasTip?: boolean;
+      hasClaw?: boolean;
+      isCurledKnuckle?: boolean;
     }
 
-    const segments: HandCapsule[] = [];
+    const segments: LimbSeg[] = [
+      // Bone 1: Shoulder -> Elbow (smooth tapered deltoid-to-elbow cylinder)
+      {
+        kind: 'upper',
+        ax: shX, ay: shY, bx: elX, by: elY,
+        r0: isSideView ? 11.2 : 10.2,
+        r1: isSideView ? 8.2 : 7.4,
+      },
+      // Bone 2: Elbow -> Wrist (seamlessly fused at rounded elbow joint!)
+      {
+        kind: 'forearm',
+        ax: elX, ay: elY, bx: wrX, by: wrY,
+        r0: isSideView ? 8.0 : 7.2,
+        r1: isSideView ? 6.2 : 5.4,
+      },
+    ];
 
-    // 1. Sculpted Palm capsule (f = -0.5 -> 8.8)
+    // Palm capsule
     const [p0x, p0y] = toWorld(-0.5, 0);
     const [p1x, p1y] = toWorld(8.6, 0.2);
-    segments.push({
-      ax: p0x, ay: p0y, bx: p1x, by: p1y,
-      r0: 5.2, r1: 5.8,
-      hasTip: false, hasClaw: false, isCurledKnuckle: false,
-    });
+    segments.push({ kind: 'palm', ax: p0x, ay: p0y, bx: p1x, by: p1y, r0: 5.2, r1: 5.6 });
 
-    // 2. Determine per-finger curl & spread for the 4 fingers [Index, Middle, Ring, Pinky]
+    // 4 Fingers [Index, Middle, Ring, Pinky]
     const baseC = clamp(fingerCurl, 0, 1);
     let curls: [number, number, number, number] = [baseC, baseC, baseC, baseC];
     let spreads: [number, number, number, number] = [-0.11, -0.02, 0.06, 0.15];
-
     switch (gesture) {
-      case 'wave_spread':
-        curls = [0, 0, 0, 0];
-        spreads = [-0.36, -0.12, 0.12, 0.36];
-        break;
+      case 'wave_spread': curls = [0, 0, 0, 0]; spreads = [-0.36, -0.12, 0.12, 0.36]; break;
       case 'thumbs_up':
-      case 'fist':
-        curls = [0.95, 0.95, 0.95, 0.95];
-        spreads = [-0.04, -0.01, 0.02, 0.05];
-        break;
-      case 'point':
-        curls = [0.0, 0.95, 0.95, 0.95];
-        spreads = [0.0, 0, 0, 0];
-        break;
-      case 'peace':
-        curls = [0.0, 0.0, 0.95, 0.95];
-        spreads = [-0.24, 0.22, 0.04, 0.08];
-        break;
-      case 'rock':
-        curls = [0.0, 0.95, 0.95, 0.0];
-        spreads = [-0.20, 0, 0, 0.26];
-        break;
-      case 'kiss_hand':
-        curls = [0.12, 0.08, 0.14, 0.22];
-        spreads = [-0.04, -0.01, 0.02, 0.05];
-        break;
-      default:
-        break;
+      case 'fist': curls = [0.95, 0.95, 0.95, 0.95]; spreads = [-0.04, -0.01, 0.02, 0.05]; break;
+      case 'point': curls = [0.0, 0.95, 0.95, 0.95]; spreads = [0, 0, 0, 0]; break;
+      case 'peace': curls = [0.0, 0.0, 0.95, 0.95]; spreads = [-0.24, 0.22, 0.04, 0.08]; break;
+      case 'rock': curls = [0.0, 0.95, 0.95, 0.0]; spreads = [-0.20, 0, 0, 0.26]; break;
+      case 'heart_pinch': curls = [0.18, 0.95, 0.95, 0.95]; spreads = [-0.18, 0, 0, 0]; break;
+      case 'kiss_hand': curls = [0.12, 0.08, 0.14, 0.22]; spreads = [-0.04, -0.01, 0.02, 0.05]; break;
+      default: break;
     }
 
-    const lOffsets = [-4.2, -1.4, 1.4, 4.1];
-    const fullLengths = [12.0, 13.8, 12.8, 10.2];
-    const fingerRadii = [1.65, 1.72, 1.62, 1.48];
-
+    const lOffsets = [-4.0, -1.35, 1.35, 3.9];
+    const fullLengths = [11.6, 13.4, 12.4, 9.8];
+    const fingerRadii = [1.62, 1.68, 1.58, 1.44];
     for (let i = 0; i < 4; i++) {
       const c = curls[i];
       const sp = spreads[i];
-      const [knX, knY] = toWorld(8.6, lOffsets[i]);
+      const [knX, knY] = toWorld(8.4, lOffsets[i]);
       if (c >= 0.65) {
-        // Curled finger knuckle folded into palm
-        const [foldX, foldY] = toWorld(12.2, lOffsets[i] * 0.92);
+        const [foldX, foldY] = toWorld(11.8, lOffsets[i] * 0.9);
         segments.push({
-          ax: knX, ay: knY, bx: foldX, by: foldY,
-          r0: fingerRadii[i] + 0.2, r1: fingerRadii[i],
+          kind: 'finger', ax: knX, ay: knY, bx: foldX, by: foldY,
+          r0: fingerRadii[i] + 0.15, r1: fingerRadii[i],
           hasTip: false, hasClaw: false, isCurledKnuckle: true,
         });
       } else {
-        const len = fullLengths[i] * (1 - c * 0.52);
+        const len = fullLengths[i] * (1 - c * 0.45);
         const dirAngle = theta + side * sp;
-        const tipX = knX + Math.cos(dirAngle) * len;
-        const tipY = knY + Math.sin(dirAngle) * len;
         segments.push({
-          ax: knX, ay: knY, bx: tipX, by: tipY,
+          kind: 'finger', ax: knX, ay: knY,
+          bx: knX + Math.cos(dirAngle) * len,
+          by: knY + Math.sin(dirAngle) * len,
           r0: fingerRadii[i], r1: fingerRadii[i] * 0.84,
           hasTip: true, hasClaw: true, isCurledKnuckle: false,
         });
       }
     }
 
-    // 3. Articulated Thumb (Pulgar) anchored on the inner side of the palm (f = 3.6, l = -4.6)
-    const [thBaseX, thBaseY] = toWorld(3.6, -4.5);
+    // Articulated Thumb
+    const [thBaseX, thBaseY] = toWorld(3.5, -4.4);
     if (gesture === 'thumbs_up') {
-      // Prominent Thumbs-Up pointing straight UPWARD (-Y in screen space, slightly angled outward)!
-      const upAngle = -Math.PI * 0.5 - side * 0.12;
-      const thTipX = thBaseX + Math.cos(upAngle) * 11.8;
-      const thTipY = thBaseY + Math.sin(upAngle) * 11.8;
+      const upAngle = -Math.PI * 0.5 - side * 0.10;
       segments.push({
-        ax: thBaseX, ay: thBaseY, bx: thTipX, by: thTipY,
-        r0: 2.15, r1: 1.85,
-        hasTip: true, hasClaw: true, isCurledKnuckle: false,
+        kind: 'finger', ax: thBaseX, ay: thBaseY,
+        bx: thBaseX + Math.cos(upAngle) * 12.2,
+        by: thBaseY + Math.sin(upAngle) * 12.2,
+        r0: 2.15, r1: 1.82, hasTip: true, hasClaw: true, isCurledKnuckle: false,
+      });
+    } else if (gesture === 'heart_pinch') {
+      const pinchAngle = theta - side * 0.24;
+      segments.push({
+        kind: 'finger', ax: thBaseX, ay: thBaseY,
+        bx: thBaseX + Math.cos(pinchAngle) * 9.5,
+        by: thBaseY + Math.sin(pinchAngle) * 9.5,
+        r0: 1.9, r1: 1.6, hasTip: true, hasClaw: true, isCurledKnuckle: false,
       });
     } else if (gesture === 'fist' || gesture === 'point' || gesture === 'peace' || gesture === 'rock') {
-      // Thumb tucked across the front of the curled fingers
-      const [thFoldX, thFoldY] = toWorld(8.4, -0.6);
+      const [thFoldX, thFoldY] = toWorld(8.2, -0.6);
       segments.push({
-        ax: thBaseX, ay: thBaseY, bx: thFoldX, by: thFoldY,
-        r0: 1.9, r1: 1.65,
-        hasTip: false, hasClaw: false, isCurledKnuckle: true,
+        kind: 'finger', ax: thBaseX, ay: thBaseY, bx: thFoldX, by: thFoldY,
+        r0: 1.85, r1: 1.6, hasTip: false, hasClaw: false, isCurledKnuckle: true,
       });
     } else {
-      // Extended thumb (open, wave_spread, kiss_hand)
       const thSpread = gesture === 'wave_spread' ? -0.78 : (gesture === 'kiss_hand' ? -0.22 : -0.48);
-      const thLen = 9.8 * (1 - baseC * 0.48);
+      const thLen = 9.6 * (1 - baseC * 0.45);
       const thAngle = theta + side * thSpread;
-      const thTipX = thBaseX + Math.cos(thAngle) * thLen;
-      const thTipY = thBaseY + Math.sin(thAngle) * thLen;
       segments.push({
-        ax: thBaseX, ay: thBaseY, bx: thTipX, by: thTipY,
-        r0: 1.95, r1: 1.65,
-        hasTip: true, hasClaw: true, isCurledKnuckle: false,
+        kind: 'finger', ax: thBaseX, ay: thBaseY,
+        bx: thBaseX + Math.cos(thAngle) * thLen,
+        by: thBaseY + Math.sin(thAngle) * thLen,
+        r0: 1.9, r1: 1.62, hasTip: true, hasClaw: true, isCurledKnuckle: false,
       });
     }
 
-    // Compute bounding box of the entire hand
+    // Tight bounding box for entire arm + hand chain
     let minX = W - 1, maxX = 0, minY = H - 1, maxY = 0;
     for (const seg of segments) {
-      const pad = Math.max(seg.r0, seg.r1) + 7;
+      const pad = Math.max(seg.r0, seg.r1) + 6;
       minX = Math.min(minX, Math.floor(Math.min(seg.ax, seg.bx) - pad));
       maxX = Math.max(maxX, Math.ceil(Math.max(seg.ax, seg.bx) + pad));
       minY = Math.min(minY, Math.floor(Math.min(seg.ay, seg.by) - pad));
@@ -3810,11 +4771,16 @@ export function createPixelAvatarEngine(
     minX = Math.max(1, minX); maxX = Math.min(W - 2, maxX);
     minY = Math.max(1, minY); maxY = Math.min(H - 2, maxY);
 
-    // Pass 1 & 2: Evaluate signed distance to all hand/finger capsules for crisp 1px outline + 3D shaded interior
+    // Unified pixel-art SDF evaluation pass
     for (let y = minY; y <= maxY; y++) {
       const row = y * W;
       for (let x = minX; x <= maxX; x++) {
-        let bestFillCol = 0;
+        let bestSegIdx = -1;
+        let bestT = 0;
+        let bestDist = 0;
+        let bestRad = 1;
+        let bestCx = 0;
+        let bestCy = 0;
         let minEdgeDist = 999;
 
         for (let i = 0; i < segments.length; i++) {
@@ -3828,57 +4794,124 @@ export function createPixelAvatarEngine(
           const edgeDist = dist - rad;
 
           if (edgeDist < minEdgeDist) minEdgeDist = edgeDist;
-
           if (edgeDist <= 0) {
-            if (seg.hasTip && t > 0.54) {
-              bestFillCol = tipCol;
-            } else {
-              const lightDot = ((x - cx) * -0.45 + (y - cy) * -0.55) / Math.max(1, rad);
-              bestFillCol = lightDot > 0.24 ? hiCol : (lightDot < -0.35 ? deepCol : baseCol);
-            }
-            if (seg.isCurledKnuckle && t > 0.82) {
-              bestFillCol = PAL.outline;
+            // Forearm & hand naturally layer cleanly over upper arm when elbow bends sharply!
+            if (bestSegIdx === -1 || i >= bestSegIdx) {
+              bestSegIdx = i;
+              bestT = t;
+              bestDist = dist;
+              bestRad = rad;
+              bestCx = cx;
+              bestCy = cy;
             }
           }
         }
 
-        if (bestFillCol !== 0) {
-          frameU32[row + x] = bestFillCol;
-          planes.dynamicHitZone[row + x] = 9;
-        } else if (minEdgeDist <= 1.05) {
-          frameU32[row + x] = PAL.outline;
+        if (bestSegIdx !== -1) {
+          const seg = segments[bestSegIdx];
+          const nx = clamp((x - bestCx) / Math.max(1, bestRad), -0.95, 0.95);
+          const ny = clamp((y - bestCy) / Math.max(1, bestRad), -0.95, 0.95);
+          const nz = Math.sqrt(Math.max(0.06, 1 - Math.min(0.94, nx * nx + ny * ny)));
+          const lit = nx < 0.25;
+          let col: number;
+
+          if (seg.kind === 'upper') {
+            if (isMaid) {
+              if (bestT < 0.44) {
+                col = bestT > 0.35
+                  ? (Math.sin(x * 0.8 + y * 0.5) > 0 ? PAL.whitePure : PAL.whiteShadow)
+                  : shadeMaterial3D(x, y, nx, ny, nz, 'velvet', 0, 0.25);
+              } else {
+                col = shadeMaterial3D(x, y, nx, ny, nz, 'skin', 0, 0.25);
+              }
+            } else if (hasSuit) {
+              col = shadeMaterial3D(x, y, nx, ny, nz, mat, 0, isOrig ? 0.56 : 0.48);
+              // Iconic thick white bicep band (or gold for Marfil) locked cleanly to upper arm bone!
+              if (bestT >= 0.20 && bestT <= 0.42) {
+                col = (bestT < 0.23 || bestT > 0.39) ? (isMarfil ? PAL.goldDark : PAL.latexDeep) : (lit ? bandHi : bandSh);
+              }
+            } else {
+              col = shadeMaterial3D(x, y, nx, ny, nz, 'skin', 0, 0.22);
+              // Slipped glossy black bra strap draped organically across upper arm!
+              if (hasSlippedStrapOnArm && bestT >= 0.16 && bestT <= 0.27) {
+                col = (bestT < 0.19 || bestT > 0.24) ? PAL.whitePure : PAL.latexBase;
+              }
+            }
+          } else if (seg.kind === 'forearm') {
+            if (isMaid) {
+              if (bestT > 0.66) {
+                col = Math.sin(x * 0.8 + y * 0.5) > 0 ? PAL.whitePure : PAL.whiteShadow;
+              } else {
+                col = shadeMaterial3D(x, y, nx, ny, nz, 'skin', 0, 0.25);
+              }
+            } else if (hasSuit) {
+              col = shadeMaterial3D(x, y, nx, ny, nz, mat, 0, isOrig ? 0.54 : 0.48);
+              // Iconic thick white wrist cuff band (or gold for Marfil) locked cleanly to forearm bone!
+              if (bestT >= 0.66 && bestT <= 0.90) {
+                col = (bestT < 0.69 || bestT > 0.87) ? (isMarfil ? PAL.goldDark : PAL.latexDeep) : (lit ? bandHi : bandSh);
+              }
+            } else if (hasSeparateGloves) {
+              if (bestT >= 0.24) {
+                if (bestT <= 0.38) {
+                  col = (bestT < 0.27 || bestT > 0.35) ? PAL.latexDeep : (lit ? PAL.whitePure : PAL.whiteShadow);
+                } else {
+                  col = shadeMaterial3D(x, y, nx, ny, nz, 'latex', 0, 0.54);
+                }
+              } else {
+                col = shadeMaterial3D(x, y, nx, ny, nz, 'skin', 0, 0.22);
+              }
+            } else {
+              col = shadeMaterial3D(x, y, nx, ny, nz, 'skin', 0, 0.22);
+            }
+          } else if (seg.kind === 'palm') {
+            const palmMat: MaterialKind = (isOrig || isMarfil || hasSeparateGloves) ? (isMarfil ? 'ivory' : 'latex') : 'skin';
+            col = shadeMaterial3D(x, y, nx, ny, nz, palmMat, 0, (isOrig || hasSeparateGloves) ? 0.46 : 0.24);
+          } else {
+            // Articulated finger: pure white fingertip when gloved, or smooth porcelain skin when bare (3D reference!)
+            if (seg.hasTip && bestT > 0.48 && (isOrig || isMarfil || hasSeparateGloves)) {
+              col = bestDist > bestRad * 0.72 && !lit ? PAL.whiteShadow : tipCol;
+            } else {
+              const fMat: MaterialKind = (isOrig || isMarfil || hasSeparateGloves) ? (isMarfil ? 'ivory' : 'latex') : 'skin';
+              col = shadeMaterial3D(x, y, nx, ny, nz, fMat, 0, (isOrig || hasSeparateGloves) ? 0.42 : 0.22);
+            }
+            if (seg.isCurledKnuckle && bestT > 0.82) col = PAL.outline;
+          }
+
+          frameU32[row + x] = col;
+          planes.dynamicHitZone[row + x] = isSideView ? 16 : (side === -1 ? 15 : 16);
+        } else if (minEdgeDist <= 1.1) {
+          // Seamless 1px pixel-art outer outline (avoid cutting dark seam across inner shoulder socket!)
+          const distToSh = Math.hypot(x - shX, y - shY);
+          const isInnerShoulderSocket = !isSideView && distToSh < 10.8 && (side * (x - shX) < 1.5);
+          if (!isInnerShoulderSocket) {
+            frameU32[row + x] = PAL.outline;
+          }
         }
       }
     }
 
-    // Pass 3: Iconic Gothic Claws at the tip of every extended finger & thumb
-    for (let i = 1; i < segments.length; i++) {
+    // Crisp gothic claws at tips of all extended fingers & thumb
+    for (let i = 3; i < segments.length; i++) {
       const seg = segments[i];
       if (!seg.hasClaw) continue;
       const vx = seg.bx - seg.ax, vy = seg.by - seg.ay;
       const len = Math.hypot(vx, vy) || 1;
       const ux = vx / len, uy = vy / len;
       const px = -uy, py = ux;
-      const clawLen = 5.2;
+      const clawLen = 5.0;
       for (let s = 0; s <= 5; s++) {
         const u = s / 5;
         const cx = seg.bx + ux * (u * clawLen);
         const cy = seg.by + uy * (u * clawLen);
-        const halfW = (1 - u) * 1.15;
+        const halfW = (1 - u) * 1.1;
         for (let w = -halfW; w <= halfW; w += 0.65) {
           setPx(Math.round(cx + px * w), Math.round(cy + py * w), s === 2 ? PAL.clawHi : PAL.claw);
         }
       }
     }
 
-    // Pass 4: Back-of-hand Star-X mark (Original / Marfil) or Maid crimson wrist bow
-    if (isOrig || isMarfil) {
-      const [cxX, cyX] = toWorld(4.4, 0.2);
-      for (let d = -3; d <= 3; d++) {
-        setPx(Math.round(cxX + d * (fx * 0.7 + lx * 0.7)), Math.round(cyX + d * (fy * 0.7 + ly * 0.7)), xMarkCol);
-        setPx(Math.round(cxX + d * (fx * 0.7 - lx * 0.7)), Math.round(cyX + d * (fy * 0.7 - ly * 0.7)), xMarkCol);
-      }
-    } else if (isMaid) {
+    // Maid crimson wrist bow
+    if (isMaid) {
       const [bx, by] = toWorld(-1.5, 0);
       for (let dy = -1; dy <= 1; dy++) for (let dx = -2; dx <= 2; dx++) {
         setPx(Math.round(bx + dx), Math.round(by + dy), dx === 0 && dy === 0 ? PAL.ribbonHi : PAL.ribbonBase);
@@ -3894,12 +4927,12 @@ export function createPixelAvatarEngine(
     // Combined vertical hip displacement: crouch lowers waist, jump lifts entire body into the air!
     const netVerticalY = pose.bodyBounceY + pose.crouchDepth - pose.jumpHeight;
 
-    // Compute hierarchically locked world transforms for articulated parts (zero joint detachment!)
+    // Compute hierarchically locked world transforms (upper torso hinges strictly on waist seam -> ZERO seam tearing!)
     const cosT = Math.cos(pose.torsoAngle), sinT = Math.sin(pose.torsoAngle);
     const waistPivotX = CX + pose.hipSwayX;
     const waistPivotY = S.waistY + netVerticalY;
-    const torsoDstPivotX = waistPivotX + pose.torsoOffX * 0.45;
-    const torsoDstPivotY = waistPivotY + pose.torsoOffY * 0.85;
+    const torsoDstPivotX = waistPivotX;
+    const torsoDstPivotY = waistPivotY;
     const upperOffX = torsoDstPivotX - CX;
     const upperOffY = torsoDstPivotY - S.waistY;
 
@@ -3918,11 +4951,16 @@ export function createPixelAvatarEngine(
     const headDstPivotX = neckWorldX + pose.headOffX;
     const headDstPivotY = neckWorldY + pose.headOffY;
 
-    // 1. Back View Side-Peek Bust (follows rotated chest!)
+    // 1. Back View Side-Peek Bust (follows rotated chest in lockstep with pose.torsoAngle!)
     if (state.view === 'back') {
+      const peekPivotDstX = CX + chestOffX;
+      const peekPivotDstY = S.bustCenterY + chestOffY;
       for (let y = Math.max(0, Math.floor(S.bustTopY - 8 + chestOffY)); y <= Math.min(H - 1, Math.ceil(S.bustBotY + 12 + chestOffY)); y++) {
+        const pdy = y - peekPivotDstY;
         for (let x = Math.max(0, Math.floor(CX - 66 + chestOffX)); x <= Math.min(W - 1, Math.ceil(CX + 66 + chestOffX)); x++) {
-          const lx = x - chestOffX, ly = y - chestOffY;
+          const pdx = x - peekPivotDstX;
+          const lx = CX + pdx * cosT + pdy * sinT;
+          const ly = S.bustCenterY - pdx * sinT + pdy * cosT;
           const s = lx < CX ? springs.bustL : springs.bustR;
           const sx = Math.round(lx - s.x * .75), sy = Math.round(ly - s.y * .75);
           if (sx >= 0 && sx < W && sy >= 0 && sy < H && planes.peekRGBA[sy * W + sx]) {
@@ -3940,39 +4978,46 @@ export function createPixelAvatarEngine(
       }
     }
 
-    // 2. Articulated Lower Body (Waist -> Hips -> Bending Knees -> Calves -> Feet with Crouch, Jump & Leg Lift!)
+    // 2. Articulated Lower Body (Rigid Pelvis/Hips + Bending Knees/Calves -> ZERO glute/thigh band misalignment on crouch or sway!)
     const sGL = springs.gluteL, sGR = springs.gluteR;
     const hasHip = state.view === 'front' && (Math.abs(sGL.x) > .05 || Math.abs(sGL.y) > .05 || Math.abs(sGR.x) > .05 || Math.abs(sGR.y) > .05 || contacts.length > 0);
     const hipY0 = Math.floor(S.hipTopY), hipY1 = Math.ceil(S.thighBandY + 16);
-    const lowerStartY = Math.floor(S.waistY - 12);
-    const dstStartY = Math.max(0, Math.floor(lowerStartY + netVerticalY - 4));
-    const srcSpanY = Math.max(1, S.footTipY - lowerStartY);
+    const lowerStartY = Math.floor(S.waistY - 1);
+    const pelvisEndSrcY = S.crotchY + 8;
+    const dstWaistTopY = lowerStartY + netVerticalY;
+    const dstPelvisEndY = pelvisEndSrcY + netVerticalY;
+    const dstStartY = Math.max(0, Math.floor(dstWaistTopY - 2));
+    const legSrcSpanY = Math.max(1, S.footTipY - pelvisEndSrcY);
 
     for (let y = dstStartY; y < H; y++) {
       const row = y * W;
       for (let x = 10; x < W - 10; x++) {
         const isLeftLeg = x < waistPivotX;
         const legLift = state.view === 'side' ? Math.max(pose.legLiftL, pose.legLiftR) : (isLeftLeg ? pose.legLiftL : pose.legLiftR);
-        // Feet stay planted at S.footTipY during crouch, and lift up during jump or single-leg lift!
-        const dstWaistTopY = lowerStartY + netVerticalY;
         const dstFootBotY = S.footTipY - pose.jumpHeight - legLift;
-        if (y < dstWaistTopY - 2 || y > dstFootBotY + 1) continue;
+        if (y < dstWaistTopY - 1 || y > dstFootBotY + 1) continue;
 
-        const tLeg = clamp((y - dstWaistTopY) / Math.max(20, dstFootBotY - dstWaistTopY), 0, 1);
-        const syRaw = lowerStartY + tLeg * srcSpanY;
+        let syRaw: number;
+        if (y <= dstPelvisEndY) {
+          // Pelvis & hip region stays 1:1 vertical scale so glutes, hip X-marks & waistband NEVER shear on crouch!
+          syRaw = lowerStartY + (y - dstWaistTopY);
+        } else {
+          // Knee & calf compression absorbs crouch & leg-lift naturally!
+          const tLeg = clamp((y - dstPelvisEndY) / Math.max(18, dstFootBotY - dstPelvisEndY), 0, 1);
+          syRaw = pelvisEndSrcY + tLeg * legSrcSpanY;
+        }
         const sy = Math.round(syRaw);
         if (sy < lowerStartY || sy >= H) continue;
 
-        const swayK = smoothstep(348, 200, syRaw);
-        // Outward/forward knee bend bow when crouching or lifting a leg!
+        // Keep swayK = 1.0 across the ENTIRE pelvis (above S.crotchY + 8) so glutes & thighs move rigidly together!
+        const swayK = smoothstep(348, pelvisEndSrcY, syRaw);
         const kneeProfile = syRaw > S.crotchY ? Math.sin(clamp((syRaw - S.crotchY) / (S.footTipY - S.crotchY), 0, 1) * Math.PI) : 0;
         const kneeBendDir = state.view === 'side' ? -1.35 : (isLeftLeg ? -1 : 1);
-        const kneeBowX = kneeProfile * (pose.crouchDepth * 0.34 + legLift * 0.25) * kneeBendDir;
+        const kneeBowX = kneeProfile * (pose.crouchDepth * 0.36 + legLift * 0.25) * kneeBendDir;
         const rowOffX = pose.hipSwayX * swayK + kneeBowX;
 
         const sx = Math.round(x - rowOffX);
         if (sx < 14 || sx >= W - 14) continue;
-        // Prevent left/right leg cross-bleeding when only one leg is lifted
         if (state.view !== 'side' && syRaw > S.crotchY + 3 && ((isLeftLeg && sx > CX + 1) || (!isLeftLeg && sx < CX - 1))) {
           continue;
         }
@@ -4007,7 +5052,9 @@ export function createPixelAvatarEngine(
         const col = (hasSuit && planes.torsoSuitRGBA[sIdx] !== 0) ? planes.torsoSuitRGBA[sIdx] : planes.torsoRGBA[sIdx];
         if (col !== 0) {
           frameU32[dstIdx] = col;
-          if (state.view === 'front' && sy >= S.hipTopY && sy <= S.thighBandY + 14 && Math.abs(sx - CX) >= 26) {
+          if (!hasSuit && state.stockings && state.view !== 'side' && sy >= S.hipPeakY + 2 && sy <= S.thighBandY + 12 && (Math.abs(Math.abs(sx - CX) - 26) <= 6 || sy >= S.thighBandY - 4)) {
+            planes.dynamicHitZone[dstIdx] = 14;
+          } else if (state.view === 'front' && sy >= S.hipTopY && sy <= S.thighBandY + 14 && Math.abs(sx - CX) >= 26) {
             planes.dynamicHitZone[dstIdx] = sx < CX ? 3 : 4;
           } else {
             planes.dynamicHitZone[dstIdx] = 9;
@@ -4016,32 +5063,59 @@ export function createPixelAvatarEngine(
       }
     }
 
-    // 3. Articulated Upper Torso (Waist -> Neck, pivots cleanly at Waist!)
+    // 3. Articulated Upper Torso (Waist -> Neck, cleanly overlapped at Waist with ZERO seam gap!)
     blitRotatedBuffer(
       planes.torsoRGBA,
       hasSuit ? planes.torsoSuitRGBA : null,
       CX, S.waistY,
       torsoDstPivotX, torsoDstPivotY,
       pose.torsoAngle,
-      CX - 68 + upperOffX, S.neckTopY - 12 + upperOffY,
-      CX + 68 + upperOffX, S.waistY + 12 + upperOffY,
+      CX - 70 + upperOffX, S.neckTopY - 12 + upperOffY,
+      CX + 70 + upperOffX, S.waistY + 6 + upperOffY,
       9,
-      Math.floor(S.neckTopY - 4), Math.ceil(S.waistY + 8),
+      Math.floor(S.neckTopY - 4), Math.ceil(S.waistY + 4),
     );
 
-    // Helper to render the 3-link arm chain (Shoulder -> Upper Arm -> Elbow -> Forearm -> Wrist -> 5-Finger Hand)
+    // Interactive clothing hotspots on upper torso (Front Bra Straps = 12, Back Bra Clasp = 13)
+    if (!hasSuit && state.bra) {
+      if (state.view === 'back') {
+        const claspX = Math.round(CX + chestOffX);
+        const claspY = Math.round(134 + chestOffY);
+        for (let dy = -9; dy <= 9; dy++) {
+          for (let dx = -9; dx <= 9; dx++) {
+            const hx = claspX + dx, hy = claspY + dy;
+            if (hx >= 0 && hx < W && hy >= 0 && hy < H && planes.dynamicHitZone[hy * W + hx] !== 0) {
+              planes.dynamicHitZone[hy * W + hx] = 13;
+            }
+          }
+        }
+      } else if (state.view === 'front') {
+        for (const s of [-1, 1]) {
+          const strapX = Math.round(CX + s * 18 + chestOffX);
+          for (let hy = Math.max(0, Math.round(S.shoulderY + chestOffY)); hy <= Math.min(H - 1, Math.round(S.bustTopY + 6 + chestOffY)); hy++) {
+            for (let dx = -5; dx <= 5; dx++) {
+              const hx = strapX + dx;
+              if (hx >= 0 && hx < W && planes.dynamicHitZone[hy * W + hx] !== 0) {
+                planes.dynamicHitZone[hy * W + hx] = 12;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Helper to render the seamless unified 2-bone SDF arm + 5-finger hand chain
     const renderSegmentedArm = (side: -1 | 1) => {
-      const shSrcX = CX + side * (S.shoulderX - 3), shSrcY = S.shoulderY + 9;
+      const shSrcX = CX + side * (S.shoulderX - 3.5), shSrcY = S.shoulderY + 9;
       const elSrcX = CX + side * (S.elbowX + 1), elSrcY = S.elbowY;
       const wrSrcX = CX + side * S.wristX, wrSrcY = S.wristY;
 
       const rawArmAngle = side === -1 ? pose.armLAngle : pose.armRAngle;
-      // 3D-to-2D shoulder roll: when an arm swings inward across the chest, the shoulder pivot shifts slightly inward
       const inwardSwing = Math.max(0, -side * rawArmAngle);
-      const inwardRollX = -side * Math.min(9.5, inwardSwing * 8.5);
+      const inwardRollX = -side * Math.min(8.5, inwardSwing * 7.5);
       const relX = shSrcX - CX + inwardRollX, relY = shSrcY - S.waistY;
       const shDstX = torsoDstPivotX + relX * cosT - relY * sinT;
-      const shDstY = torsoDstPivotY + relX * sinT + relY * cosT + pose.armLiftY;
+      const shDstY = torsoDstPivotY + relX * sinT + relY * cosT + pose.armLiftY * 0.45;
 
       const upperArmAngle = pose.torsoAngle + rawArmAngle;
       const elbowBend = side === -1 ? pose.elbowLAngle : pose.elbowRAngle;
@@ -4059,45 +5133,11 @@ export function createPixelAvatarEngine(
       const wrDstX = elDstX + wrRelX * cosF - wrRelY * sinF;
       const wrDstY = elDstY + wrRelX * sinF + wrRelY * cosF;
 
-      const armBodyBuf = side === -1 ? planes.armLRGBA : planes.armRRGBA;
-      const armSuitBuf = hasSuit ? (side === -1 ? planes.armLSuitRGBA : planes.armRSuitRGBA) : null;
-
-      // Link 1: Upper Arm (Shoulder -> Elbow)
-      blitRotatedBuffer(
-        armBodyBuf,
-        armSuitBuf,
-        shSrcX, shSrcY,
-        shDstX, shDstY,
-        upperArmAngle,
-        2, 12,
-        W - 2, 275,
-        9,
-        84, Math.round(S.elbowY + 4),
-      );
-
-      // Elbow hinge bridge joint
-      if (Math.abs(elbowBend) > 0.12) {
-        renderElbowBridgeJoint(elDstX, elDstY);
-      }
-
-      // Link 2: Forearm (Elbow -> Wrist)
-      blitRotatedBuffer(
-        armBodyBuf,
-        armSuitBuf,
-        elSrcX, elSrcY,
-        elDstX, elDstY,
-        forearmAngle,
-        2, 12,
-        W - 2, 275,
-        9,
-        Math.round(S.elbowY - 3), Math.round(S.wristY + 4),
-      );
-
-      // Link 3: Articulated Hand & 5 Individual Fingers at Wrist
-      renderArticulatedHandAndFingers(
+      renderUnifiedArticulatedArm(
         side,
-        wrDstX,
-        wrDstY,
+        shDstX, shDstY,
+        elDstX, elDstY,
+        wrDstX, wrDstY,
         totalHandAngle,
         side === -1 ? pose.handLGesture : pose.handRGesture,
         side === -1 ? pose.fingerCurlL : pose.fingerCurlR,
@@ -4126,7 +5166,7 @@ export function createPixelAvatarEngine(
       (state.view === 'front' || state.view === 'side') ? 8 : 9,
     );
 
-    // 6. Soft Planes (Bust in Front/Side locked to chestOffX/Y, Glutes in Back/Side locked to hips!)
+    // 6. Soft Planes (Front Bust rotates in sync with pose.torsoAngle so bust & zipper NEVER misalign!)
     if (state.view === 'front') {
       renderSoftPlane(
         CX - S.bustCenterX - S.bustRx - 14, S.bustTopY - 12,
@@ -4135,6 +5175,8 @@ export function createPixelAvatarEngine(
         CX - S.bustCenterX, S.bustCenterY, CX + S.bustCenterX, S.bustCenterY,
         1, 2, false,
         chestOffX, chestOffY,
+        pose.torsoAngle,
+        CX, S.bustCenterY,
       );
     } else if (state.view === 'side') {
       renderSoftPlane(
@@ -4143,6 +5185,8 @@ export function createPixelAvatarEngine(
         S.sideBustX, S.sideBustY, S.sideGluteX, S.sideGluteY,
         1, 2, false,
         chestOffX, chestOffY,
+        pose.torsoAngle,
+        S.sideBustX, S.sideBustY,
       );
       renderSoftPlane(
         SX - 6, 152, SX + 74, 248,
@@ -4165,15 +5209,15 @@ export function createPixelAvatarEngine(
     // 7. Dynamic Skirt / Silk Sash Layer (follows hips + skirt springs)
     renderDynamicSkirtLayer(pose.hipSwayX, netVerticalY);
 
-    // 8. Side-View 3-Link Articulated Front Arm (Shoulder -> Elbow -> Wrist -> 5-Finger Hand)
+    // 8. Side-View Unified 2-Bone SDF Front Arm (ZERO gaps/slicing tears!)
     if (state.view === 'side') {
-      const sideShSrcX = SX + 2, sideShSrcY = 98;
+      const sideShSrcX = SX + 2, sideShSrcY = 100;
       const sideElSrcX = SX - 4, sideElSrcY = 152;
       const sideWrSrcX = SX - 18, sideWrSrcY = 188;
 
       const sRelX = sideShSrcX - CX, sRelY = sideShSrcY - S.waistY;
       const sideShDstX = torsoDstPivotX + sRelX * cosT - sRelY * sinT;
-      const sideShDstY = torsoDstPivotY + sRelX * sinT + sRelY * cosT + pose.armLiftY;
+      const sideShDstY = torsoDstPivotY + sRelX * sinT + sRelY * cosT + pose.armLiftY * 0.45;
 
       const sideUpperAngle = pose.torsoAngle + pose.sideArmAngle;
       const sideForearmAngle = sideUpperAngle + pose.sideElbowAngle;
@@ -4185,35 +5229,11 @@ export function createPixelAvatarEngine(
       const sideWrDstX = sideElDstX + (sideWrSrcX - sideElSrcX) * cosSF - (sideWrSrcY - sideElSrcY) * sinSF;
       const sideWrDstY = sideElDstY + (sideWrSrcX - sideElSrcX) * sinSF + (sideWrSrcY - sideElSrcY) * cosSF;
 
-      blitRotatedBuffer(
-        planes.frontArmRGBA,
-        hasSuit ? planes.frontArmSuitRGBA : null,
-        sideShSrcX, sideShSrcY,
-        sideShDstX, sideShDstY,
-        sideUpperAngle,
-        2, 14,
-        W - 2, 275,
-        9,
-        84, 156,
-      );
-      if (Math.abs(pose.sideElbowAngle) > 0.12) {
-        renderElbowBridgeJoint(sideElDstX, sideElDstY);
-      }
-      blitRotatedBuffer(
-        planes.frontArmRGBA,
-        hasSuit ? planes.frontArmSuitRGBA : null,
-        sideElSrcX, sideElSrcY,
-        sideElDstX, sideElDstY,
-        sideForearmAngle,
-        2, 14,
-        W - 2, 275,
-        9,
-        148, 193,
-      );
-      renderArticulatedHandAndFingers(
+      renderUnifiedArticulatedArm(
         1,
-        sideWrDstX,
-        sideWrDstY,
+        sideShDstX, sideShDstY,
+        sideElDstX, sideElDstY,
+        sideWrDstX, sideWrDstY,
         sideForearmAngle + pose.wristRAngle,
         pose.handRGesture,
         pose.fingerCurlR,
@@ -4230,13 +5250,13 @@ export function createPixelAvatarEngine(
       pose.headAngle + pose.torsoAngle * 0.35,
     );
 
-    // 9b. Render bent/foreground arms in front of bust & face (for thumbs-up, blow-kiss, elbows-in, cover-face, hands-on-hips!)
+    // 9b. Render bent/foreground arms in front of bust & face
     if (state.view !== 'side') {
       if (leftArmInFront) renderSegmentedArm(-1);
       if (rightArmInFront) renderSegmentedArm(1);
     }
 
-    // 10. Cube, Particles, Cupcake & Articulated Pixel Hand
+    // 10. Cube, Particles, Cupcake, Rose, Feather/Hand & Flash
     drawCubeParticlesAndHand();
     ctx.putImageData(frameImageData, 0, 0);
   }
@@ -4244,8 +5264,12 @@ export function createPixelAvatarEngine(
   // ---- MÉTODOS PÚBLICOS ----
   function setView(newView: AvatarView, fromAI = false): void {
     if (state.view === newView) return;
+    if (!fromAI) clearChoreoTimeouts();
     state.view = newView;
+    pointer.draggingArm = null;
+    pointer.draggingWaist = false;
     contacts.length = 0;
+    resetPoseKinematics();
     rebuildAllForView();
     applyImpulse('hairTop', newView === 'side' ? -30 : 26, -12);
     applyImpulse('hairBangs', newView === 'side' ? 32 : -26, -10);
@@ -4254,9 +5278,18 @@ export function createPixelAvatarEngine(
     if (!fromAI) emitInteraction('change_view', newView);
   }
 
+  let lastWornSuit: AvatarSuit = 'original';
+
   function setSuit(newSuit: AvatarSuit, fromAI = false): void {
     if (state.suit === newSuit) return;
+    if (!fromAI) {
+      clearChoreoTimeouts();
+      state.isChangingClothes = false;
+    }
+    if (newSuit !== 'none') lastWornSuit = newSuit;
     state.suit = newSuit;
+    state.gloves = newSuit === 'original' || newSuit === 'marfil';
+    if (newSuit !== 'none') state.strapSlip = 'none';
     rebuildSuitOnly();
     applyImpulse('skirtL', -24, -18);
     applyImpulse('skirtR', 24, -18);
@@ -4265,6 +5298,171 @@ export function createPixelAvatarEngine(
     triggerAnimation(newSuit === 'none' ? 'shy' : 'outfit_pose', 1.8);
     emitSnapshot(true);
     if (!fromAI) emitInteraction('change_suit', newSuit);
+  }
+
+  function animateUndressSuit(fromAI = false): void {
+    if (state.isChangingClothes) return;
+    if (state.suit === 'none') {
+      addBlush(0.14);
+      setMood('Ruborizada', 2.4);
+      triggerAnimation('shy_fingers', 2.1);
+      spawnBurst(CX, SKEL.headTopY + 14, 'heart', 5);
+      emitSnapshot(true);
+      if (!fromAI) emitInteraction('undress_suit', 'lenceria');
+      return;
+    }
+
+    clearChoreoTimeouts();
+    const removedSuit = state.suit;
+    lastWornSuit = removedSuit;
+    state.isChangingClothes = true;
+    if (state.view === 'back') setView('front', true);
+    setMood('Ruborizada', 3.6);
+    addBlush(0.16);
+    emitSnapshot(true);
+
+    // Step 1: Hands reach to collar / zipper
+    setCustomRigPose({
+      shoulderL: -0.64,
+      elbowL: -1.48,
+      handL: 'heart_pinch',
+      shoulderR: -0.64,
+      elbowR: -1.48,
+      handR: 'heart_pinch',
+      headTilt: 0.25,
+      mouthShape: 'open',
+      mouthOpen: 0.25,
+      durationSec: 1.5,
+    });
+
+    const startZip = state.zipper;
+    const steps = [0.28, 0.56, 0.82, 1.0];
+    steps.forEach((frac, idx) => {
+      scheduleTimeout(() => {
+        const nextZ = Math.round(lerp(startZip, 100, frac));
+        if (nextZ !== state.zipper) {
+          state.zipper = nextZ;
+          rebuildSuitOnly();
+          applyImpulse('lapelSpread', 28, 0);
+          applyImpulse('bustL', -12, -34);
+          applyImpulse('bustR', 12, -34);
+          if (idx === 1 || idx === 3) spawnBurst(CX, SKEL.bustCenterY, 'star', 3);
+          emitSnapshot(true);
+        }
+      }, 130 + idx * 145);
+    });
+
+    // Step 2: Shrug suit & gloves off gracefully, revealing gothic lingerie
+    scheduleTimeout(() => {
+      setCustomRigPose({
+        shoulderL: 0.68,
+        elbowL: -0.52,
+        handL: 'wave_spread',
+        shoulderR: 0.68,
+        elbowR: -0.52,
+        handR: 'wave_spread',
+        hipSway: 0.35,
+        headTilt: -0.32,
+        mouthShape: 'smile',
+        durationSec: 1.0,
+      });
+      state.suit = 'none';
+      state.gloves = false;
+      state.zipper = 0;
+      state.bra = true;
+      state.panties = true;
+      state.stockings = true;
+      rebuildAllForView();
+      applyImpulse('bustL', -24, -84);
+      applyImpulse('bustR', 24, -84);
+      applyImpulse('gluteL', -20, -68);
+      applyImpulse('gluteR', 20, -68);
+      applyImpulse('hairBangs', 28, -22);
+      spawnBurst(CX, SKEL.bustCenterY, 'star', 6);
+      spawnBurst(CX, SKEL.headTopY + 12, 'heart', 6);
+      emitSnapshot(true);
+    }, 760);
+
+    // Step 3: Bashful finishing pose
+    scheduleTimeout(() => {
+      state.isChangingClothes = false;
+      triggerAnimation('shy_fingers', 2.2);
+      emitSnapshot(true);
+      if (!fromAI) emitInteraction('undress_suit', removedSuit);
+    }, 1220);
+  }
+
+  function animateDressSuit(targetSuit?: AvatarSuit, fromAI = false): void {
+    if (state.isChangingClothes) return;
+    clearChoreoTimeouts();
+    const nextSuit: AvatarSuit =
+      targetSuit && targetSuit !== 'none'
+        ? targetSuit
+        : (lastWornSuit !== 'none' ? lastWornSuit : 'original');
+    lastWornSuit = nextSuit;
+    state.isChangingClothes = true;
+    if (state.view === 'back') setView('front', true);
+    setMood('Feliz', 3.2);
+    emitSnapshot(true);
+
+    // Step 1: Lift arms & slip into outer suit with zipper open
+    setCustomRigPose({
+      shoulderL: 0.78,
+      elbowL: -0.92,
+      handL: 'open',
+      shoulderR: 0.78,
+      elbowR: -0.92,
+      handR: 'open',
+      headTilt: 0.22,
+      mouthShape: 'smile',
+      durationSec: 1.1,
+    });
+
+    scheduleTimeout(() => {
+      state.suit = nextSuit;
+      state.gloves = nextSuit === 'original' || nextSuit === 'marfil';
+      state.strapSlip = 'none';
+      state.zipper = 85;
+      rebuildAllForView();
+      applyImpulse('skirtL', -34, -26);
+      applyImpulse('skirtR', 34, -26);
+      spawnBurst(CX, SKEL.bustCenterY, 'star', 5);
+      emitSnapshot(true);
+    }, 140);
+
+    // Step 2: Hands zip smoothly upward to 0%
+    const zipDown = [55, 25, 0];
+    zipDown.forEach((zVal, idx) => {
+      scheduleTimeout(() => {
+        if (idx === 0) {
+          setCustomRigPose({
+            shoulderL: -0.54,
+            elbowL: -1.42,
+            handL: 'heart_pinch',
+            shoulderR: -0.54,
+            elbowR: -1.42,
+            handR: 'heart_pinch',
+            headTilt: -0.15,
+            mouthShape: 'smile',
+            durationSec: 0.9,
+          });
+        }
+        state.zipper = zVal;
+        rebuildSuitOnly();
+        applyImpulse('bustL', -10, -28);
+        applyImpulse('bustR', 10, -28);
+        emitSnapshot(true);
+      }, 310 + idx * 145);
+    });
+
+    // Step 3: Showcase finished outfit
+    scheduleTimeout(() => {
+      state.isChangingClothes = false;
+      triggerAnimation(nextSuit === 'maid' ? 'curtsy' : 'outfit_pose', 2.0);
+      spawnBurst(CX, SKEL.headTopY + 12, 'star', 6);
+      emitSnapshot(true);
+      if (!fromAI) emitInteraction('dress_suit', nextSuit);
+    }, 820);
   }
 
   function setZipper(percent: number): void {
@@ -4278,11 +5476,45 @@ export function createPixelAvatarEngine(
 
   function setLingerie(partial: Partial<LingerieState>): void {
     let changed = false;
-    if (typeof partial.bra === 'boolean' && partial.bra !== state.bra) { state.bra = partial.bra; changed = true; }
-    if (typeof partial.panties === 'boolean' && partial.panties !== state.panties) { state.panties = partial.panties; changed = true; }
-    if (typeof partial.stockings === 'boolean' && partial.stockings !== state.stockings) { state.stockings = partial.stockings; changed = true; }
+    let needsBaseRebuild = false;
+    let needsComposite = false;
+    if (typeof partial.bra === 'boolean' && partial.bra !== state.bra) {
+      state.bra = partial.bra;
+      changed = true;
+      needsComposite = true;
+    }
+    if (typeof partial.panties === 'boolean' && partial.panties !== state.panties) {
+      state.panties = partial.panties;
+      changed = true;
+      needsBaseRebuild = true;
+    }
+    if (typeof partial.stockings === 'boolean' && partial.stockings !== state.stockings) {
+      state.stockings = partial.stockings;
+      changed = true;
+      needsComposite = true;
+    }
+    if (typeof partial.garters === 'boolean' && partial.garters !== state.garters) {
+      state.garters = partial.garters;
+      changed = true;
+      needsBaseRebuild = true;
+    }
+    if (typeof partial.gloves === 'boolean' && partial.gloves !== state.gloves) {
+      state.gloves = partial.gloves;
+      changed = true;
+    }
+    if (typeof partial.choker === 'boolean' && partial.choker !== state.choker) {
+      state.choker = partial.choker;
+      changed = true;
+      needsBaseRebuild = true;
+    }
+    if (partial.strapSlip && partial.strapSlip !== state.strapSlip) {
+      state.strapSlip = partial.strapSlip;
+      changed = true;
+      needsBaseRebuild = true;
+    }
     if (changed) {
-      compositeAllLayers();
+      if (needsBaseRebuild) rebuildLingerieAndComposite();
+      else if (needsComposite) compositeAllLayers();
       emitSnapshot(true);
     }
   }
@@ -4291,6 +5523,12 @@ export function createPixelAvatarEngine(
     let changed = false;
     if (typeof partial.handEnabled === 'boolean' && partial.handEnabled !== state.handEnabled) {
       state.handEnabled = partial.handEnabled;
+      if (state.handEnabled) state.featherEnabled = false;
+      changed = true;
+    }
+    if (typeof partial.featherEnabled === 'boolean' && partial.featherEnabled !== state.featherEnabled) {
+      state.featherEnabled = partial.featherEnabled;
+      if (state.featherEnabled) state.handEnabled = false;
       changed = true;
     }
     if (typeof partial.cubeEnabled === 'boolean' && partial.cubeEnabled !== state.cubeEnabled) {
@@ -4307,7 +5545,54 @@ export function createPixelAvatarEngine(
       if (!state.animationsEnabled) state.currentAnim = 'idle';
       changed = true;
     }
+    if (typeof partial.musicBoxEnabled === 'boolean' && partial.musicBoxEnabled !== state.musicBoxEnabled) {
+      state.musicBoxEnabled = partial.musicBoxEnabled;
+      if (state.musicBoxEnabled) {
+        spawnBurst(CX, SKEL.headTopY + 12, 'note', 5);
+        emitInteraction('music_box', 'caja musical');
+      }
+      changed = true;
+    }
     if (changed) emitSnapshot(true);
+  }
+
+  function setStageTheme(theme: StageThemeId): void {
+    if (state.stageTheme === theme) return;
+    state.stageTheme = theme;
+    buildBackground();
+    emitSnapshot(true);
+  }
+
+  function setExpressiveness(scale: number): void {
+    state.expressiveness = clamp(scale, 0.55, 1.35);
+  }
+
+  function setSensitivity(scale: number): void {
+    state.sensitivity = clamp(scale, 0.5, 1.5);
+  }
+
+  function triggerCameraFlash(): void {
+    state.flashAlpha = 1;
+    const poses: AvatarAction[] = ['peaceSign', 'wink', 'blowKiss', 'heartHands', 'thumbsUp', 'handsOnHips', 'salute', 'catPaws'];
+    const pick = poses[Math.floor(Math.random() * poses.length)];
+    triggerAction(pick, true);
+    spawnBurst(CX, SKEL.headTopY + 12, 'star', 7);
+    emitInteraction('photo', pick);
+  }
+
+  function captureSnapshotPng(): string | null {
+    try {
+      const exportCanvas = document.createElement('canvas');
+      exportCanvas.width = W * 3;
+      exportCanvas.height = H * 3;
+      const ectx = exportCanvas.getContext('2d');
+      if (!ectx) return null;
+      ectx.imageSmoothingEnabled = false;
+      ectx.drawImage(canvas, 0, 0, exportCanvas.width, exportCanvas.height);
+      return exportCanvas.toDataURL('image/png');
+    } catch {
+      return null;
+    }
   }
 
   function triggerAction(action: AvatarAction, fromAI = false): void {
@@ -4390,6 +5675,7 @@ export function createPixelAvatarEngine(
         if (!fromAI) emitInteraction('breeze');
         break;
       case 'dance':
+        clearChoreoTimeouts();
         triggerAnimation('dance', 2.6);
         applyImpulse('hairTop', -38, -28);
         applyImpulse('hairBangs', 42, -24);
@@ -4397,13 +5683,13 @@ export function createPixelAvatarEngine(
         applyImpulse('skirtR', 54, -46);
         applyImpulse('bustL', -28, -88);
         applyImpulse('bustR', 28, -88);
-        scheduleTimeout(() => {
+        scheduleChoreoTimeout(() => {
           applyImpulse('gluteL', state.view === 'side' ? 36 : -30, -90);
           applyImpulse('gluteR', 30, -90);
           applyImpulse('skirtL', 52, -40);
           applyImpulse('skirtR', -52, -40);
         }, 280);
-        scheduleTimeout(() => {
+        scheduleChoreoTimeout(() => {
           applyImpulse('bustL', 26, -84);
           applyImpulse('bustR', -26, -84);
           applyImpulse('hairBangs', -38, -22);
@@ -4413,6 +5699,7 @@ export function createPixelAvatarEngine(
         emitSnapshot(true);
         break;
       case 'spin': {
+        clearChoreoTimeouts();
         const order: AvatarView[] = ['front', 'side', 'back'];
         const startIdx = order.indexOf(state.view);
         const step1 = order[(startIdx + 1) % 3];
@@ -4421,12 +5708,12 @@ export function createPixelAvatarEngine(
         setView(step1, true);
         applyImpulse('skirtL', 65, -52);
         applyImpulse('skirtR', -65, -52);
-        scheduleTimeout(() => {
+        scheduleChoreoTimeout(() => {
           setView(step2, true);
           applyImpulse('hairTop', 45, -24);
           applyImpulse('skirtL', -60, -48);
         }, 280);
-        scheduleTimeout(() => {
+        scheduleChoreoTimeout(() => {
           setView(step3, true);
           triggerAnimation('outfit_pose', 1.8);
           spawnBurst(CX, SKEL.headTopY + 12, 'star', 6);
@@ -4627,21 +5914,22 @@ export function createPixelAvatarEngine(
         break;
       case 'showOff': {
         // Multi-angle choreographed showcase: pose front -> side hip sway -> back glute bounce -> front wink!
+        clearChoreoTimeouts();
         triggerAnimation('outfit_pose', 2.4);
         applyImpulse('bustL', -24, -84);
         applyImpulse('bustR', 24, -84);
-        scheduleTimeout(() => {
+        scheduleChoreoTimeout(() => {
           setView('side', true);
           triggerAnimation('hip_sway', 1.8);
           applyImpulse('bustL', -34, -88);
         }, 420);
-        scheduleTimeout(() => {
+        scheduleChoreoTimeout(() => {
           setView('back', true);
           applyImpulse('gluteL', -28, -96);
           applyImpulse('gluteR', 28, -96);
           triggerAnimation('tease', 1.8);
         }, 920);
-        scheduleTimeout(() => {
+        scheduleChoreoTimeout(() => {
           setView('front', true);
           triggerAnimation('wink', 1.9);
           spawnBurst(CX, SKEL.headTopY + 12, 'star', 6);
@@ -4752,13 +6040,116 @@ export function createPixelAvatarEngine(
         applyImpulse('bustR', 20, -72);
         emitSnapshot(true);
         break;
+      case 'heartHands':
+        triggerAnimation('heart_hands', 2.4);
+        addAffection(9);
+        addBlush(.12);
+        applyImpulse('bustL', -18, -68);
+        applyImpulse('bustR', 18, -68);
+        spawnBurst(CX, SKEL.bustTopY + 6, 'heart', 8);
+        emitSnapshot(true);
+        break;
+      case 'salute':
+        triggerAnimation('salute', 2.3);
+        applyImpulse('hairBangs', 18, -16);
+        applyImpulse('bustR', 16, -62);
+        spawnBurst(CX + 26, SKEL.headTopY + 12, 'star', 5);
+        emitSnapshot(true);
+        break;
+      case 'catPaws':
+        triggerAnimation('cat_paws', 2.4);
+        addBlush(.10);
+        applyImpulse('bustL', -20, -76);
+        applyImpulse('bustR', 20, -76);
+        applyImpulse('hairTop', -16, -18);
+        spawnBurst(CX, SKEL.headTopY + 12, 'heart', 5);
+        emitSnapshot(true);
+        break;
+      case 'tickle':
+        triggerAnimation('tickled', 1.8);
+        addBlush(.14);
+        applyImpulse('bustL', -24, -84);
+        applyImpulse('bustR', 24, -84);
+        applyImpulse('hairBangs', 28, -22);
+        spawnBurst(CX, SKEL.waistY - 12, 'star', 6);
+        emitSnapshot(true);
+        break;
+      case 'shyFingers':
+        triggerAnimation('shy_fingers', 2.4);
+        addBlush(.18);
+        applyImpulse('bustL', 18, -58);
+        applyImpulse('bustR', -18, -58);
+        spawnBurst(CX, SKEL.headTopY + 14, 'heart', 4);
+        emitSnapshot(true);
+        break;
+      case 'giveRose':
+        if (state.view === 'back') setView('front', true);
+        if (!state.roseAnim) state.roseAnim = { t: 0 };
+        if (!fromAI) emitInteraction('rose', 'rosa gótica');
+        emitSnapshot(true);
+        break;
+      case 'photoPose':
+        triggerCameraFlash();
+        break;
+      case 'undressSuit':
+        animateUndressSuit(fromAI);
+        break;
+      case 'dressSuit':
+        animateDressSuit(undefined, fromAI);
+        break;
+      case 'slipStrap': {
+        const nextSlip: StrapSlipState =
+          state.strapSlip === 'none' ? 'left' : (state.strapSlip === 'left' ? 'both' : 'none');
+        setLingerie({ strapSlip: nextSlip });
+        addBlush(0.14);
+        setMood(nextSlip === 'none' ? 'Tranquila' : 'Ruborizada', 2.4);
+        applyImpulse('bustL', -16, -68);
+        applyImpulse('bustR', 16, -68);
+        setCustomRigPose({
+          shoulderL: -0.58,
+          elbowL: -1.45,
+          handL: 'heart_pinch',
+          headTilt: -0.32,
+          mouthShape: 'smile',
+          durationSec: 1.6,
+        });
+        spawnBurst(CX - 18, SKEL.bustTopY + 4, 'heart', 4);
+        if (!fromAI) emitInteraction('slip_strap', nextSlip);
+        break;
+      }
+      case 'toggleGloves':
+        setLingerie({ gloves: !state.gloves });
+        applyImpulse('hairBangs', 16, -14);
+        spawnBurst(CX, SKEL.elbowY, 'star', 4);
+        if (!fromAI) emitInteraction('toggle_gloves', state.gloves ? 'puestos' : 'sin guantes');
+        break;
+      case 'toggleStockings':
+        setLingerie({ stockings: !state.stockings });
+        applyImpulse('gluteL', -18, -54);
+        applyImpulse('gluteR', 18, -54);
+        break;
+      case 'toggleGarters':
+        setLingerie({ garters: !state.garters });
+        applyImpulse('gluteL', -16, -48);
+        applyImpulse('gluteR', 16, -48);
+        break;
+      case 'toggleChoker':
+        setLingerie({ choker: !state.choker });
+        applyImpulse('hairBangs', 14, -14);
+        break;
     }
   }
 
   function applyAIReaction(reaction: AIReactionPayload): void {
     if (reaction.changeView) setView(reaction.changeView, true);
-    if (reaction.changeSuit) setSuit(reaction.changeSuit, true);
-    if (typeof reaction.changeZipper === 'number' && !Number.isNaN(reaction.changeZipper)) {
+    if (reaction.animateUndress) {
+      animateUndressSuit(true);
+    } else if (reaction.animateDressSuit) {
+      animateDressSuit(reaction.animateDressSuit, true);
+    } else if (reaction.changeSuit) {
+      setSuit(reaction.changeSuit, true);
+    }
+    if (!reaction.animateUndress && !reaction.animateDressSuit && typeof reaction.changeZipper === 'number' && !Number.isNaN(reaction.changeZipper)) {
       setZipper(reaction.changeZipper);
     }
     if (reaction.changeLingerie) {
@@ -4771,7 +6162,14 @@ export function createPixelAvatarEngine(
       addBlush(clamp(reaction.blushDelta, -0.1, 0.25));
     }
     if (reaction.mood) {
-      setMood(reaction.mood, 3.8);
+      setMood(reaction.mood, 4.0);
+    }
+
+    if (reaction.spawnEffect && reaction.spawnEffect !== 'none') {
+      if (reaction.spawnEffect === 'hearts') spawnBurst(CX, SKEL.headTopY + 14, 'heart', 7);
+      else if (reaction.spawnEffect === 'stars') spawnBurst(CX, SKEL.headTopY + 12, 'star', 7);
+      else if (reaction.spawnEffect === 'notes') spawnBurst(CX, SKEL.shoulderY, 'note', 6);
+      else if (reaction.spawnEffect === 'petals') spawnBurst(CX, SKEL.bustTopY + 8, 'petal', 8);
     }
 
     if (reaction.rigPose) {
@@ -4789,7 +6187,7 @@ export function createPixelAvatarEngine(
 
     if (hasAnim && reaction.animation && reaction.animation !== 'idle') {
       if (reaction.action !== 'showOff' && reaction.action !== 'spin') {
-        const longAnims: AvatarAnimation[] = ['dance', 'hip_sway', 'strut', 'cheer', 'peekaboo', 'crouch'];
+        const longAnims: AvatarAnimation[] = ['dance', 'hip_sway', 'strut', 'cheer', 'peekaboo', 'crouch', 'heart_hands', 'cat_paws'];
         triggerAnimation(
           reaction.animation,
           longAnims.includes(reaction.animation) ? 2.6 : 2.2,
@@ -4802,22 +6200,33 @@ export function createPixelAvatarEngine(
       }
     }
 
-    // Optional chained secondary action (e.g., curtsy -> dance, or crouch -> jump)
-    if (
+    // Optional AI-authored multi-beat choreography sequence!
+    if (Array.isArray(reaction.choreography) && reaction.choreography.length > 0) {
+      clearChoreoTimeouts();
+      reaction.choreography.slice(0, 3).forEach((beat) => {
+        const waitMs = clamp(beat.delayMs || 1100, 350, 3800);
+        scheduleChoreoTimeout(() => {
+          if (beat.view) setView(beat.view, true);
+          if (beat.rigPose) setCustomRigPose(beat.rigPose);
+          if (beat.action) triggerAction(beat.action, true);
+        }, waitMs);
+      });
+    } else if (
       reaction.secondaryAction &&
       reaction.secondaryAction !== 'none' &&
       reaction.secondaryAction !== reaction.action
     ) {
+      clearChoreoTimeouts();
       const nextAct = reaction.secondaryAction;
-      scheduleTimeout(() => {
+      scheduleChoreoTimeout(() => {
         triggerAction(nextAct, true);
       }, 1350);
     }
 
-    // Guarantee physical movement on every AI response even if model returned action="none" & animation="idle"
-    if (!hasAction && !hasAnim && !reaction.changeView && !reaction.changeSuit) {
+    if (!hasAction && !hasAnim && !reaction.changeView && !reaction.changeSuit && !reaction.rigPose) {
       switch (reaction.mood) {
         case 'Feliz':
+        case 'Juguetona':
           triggerAnimation('happy', 1.8);
           applyImpulse('hairBangs', 22, -18);
           applyImpulse('bustL', -18, -62);
@@ -4830,6 +6239,13 @@ export function createPixelAvatarEngine(
           applyImpulse('bustL', -14, -48);
           applyImpulse('bustR', 14, -48);
           spawnBurst(CX, SKEL.headTopY + 12, 'heart', 4);
+          break;
+        case 'Traviesa':
+          triggerAnimation('wink', 1.9);
+          applyImpulse('hairBangs', 20, -14);
+          applyImpulse('bustL', -16, -56);
+          applyImpulse('bustR', 16, -56);
+          spawnBurst(CX, SKEL.headTopY + 12, 'star', 4);
           break;
         case 'Ruborizada':
           triggerAnimation('shy', 1.8);
@@ -4861,6 +6277,7 @@ export function createPixelAvatarEngine(
     try {
       if (!lastTs) lastTs = ts;
       const rawDt = (ts - lastTs) / 1000; lastTs = ts;
+      if (rawDt > 0.15) resetPoseKinematics();
       const dt = clamp(rawDt, 0.001, 0.033);
       stepAnimations(dt);
       stepPhysics(dt);
@@ -4895,6 +6312,7 @@ export function createPixelAvatarEngine(
     cancelAnimationFrame(rafId);
     pendingTimeouts.forEach((id) => window.clearTimeout(id));
     pendingTimeouts.clear();
+    clearChoreoTimeouts();
     canvas.removeEventListener('pointerdown', onPointerDown);
     canvas.removeEventListener('pointermove', onPointerMove);
     canvas.removeEventListener('pointerup', onPointerUp);
@@ -4905,12 +6323,20 @@ export function createPixelAvatarEngine(
   return {
     setView,
     setSuit,
+    animateUndressSuit,
+    animateDressSuit,
     setZipper,
     setLingerie,
     setTools,
+    setStageTheme,
+    setExpressiveness,
+    setSensitivity,
     triggerAction,
     triggerAnimation,
     setCustomRigPose,
+    setManualRigPose,
+    triggerCameraFlash,
+    captureSnapshotPng,
     applyAIReaction,
     getSnapshot,
     destroy,

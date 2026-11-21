@@ -6,25 +6,27 @@ interface ChatPanelProps {
   messages: ChatMessage[];
   isSending: boolean;
   reactiveAI: boolean;
+  archetypeLabel: string;
   onToggleReactiveAI: () => void;
   onSendMessage: (text: string) => void;
 }
 
 const QUICK_PROMPTS = [
-  'Dame un pulgar arriba',
-  'Agáchate y salta',
-  'Levanta solo una mano',
-  'Junta los codos',
+  'Quítate el traje despacio',
+  'Bájate un tirante y guíñame',
+  'Ponte el vestido maid',
+  'Quítate los guantes',
+  'Haz un corazón con los dedos',
+  'Haz patitas de gato',
   'Tira un beso con tu mano',
-  'Haz paz con los dedos y guíñame',
-  'Pon las manos en la cintura',
-  'Cruza los brazos y haz puchero',
+  'Gira 360° y presume',
 ];
 
 export function ChatPanel({
   messages,
   isSending,
   reactiveAI,
+  archetypeLabel,
   onToggleReactiveAI,
   onSendMessage,
 }: ChatPanelProps) {
@@ -53,10 +55,10 @@ export function ChatPanel({
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
             <div className="text-[10.5px] font-bold tracking-[0.9px] uppercase text-[#9b6ee8]">
-              IA Reactiva
+              IA Reactiva · {archetypeLabel}
             </div>
             <p className="mt-0.5 text-[10px] leading-tight text-[#a8a4c4]">
-              Reacciona al tacto, ropa o cubo (espera mín. 5s).
+              Primario Pawan · Respaldo Flash Lite. Reacciona al tacto, pluma o regalos.
             </p>
           </div>
           <button
@@ -81,7 +83,7 @@ export function ChatPanel({
             <Sparkles className="h-3.5 w-3.5 text-[#e8c674]" />
             <span>Diálogo con Marioneta</span>
           </span>
-          <span className="font-normal text-[#a8a4c4] normal-case tracking-normal">
+          <span className="font-normal normal-case tracking-normal text-[#a8a4c4]">
             {messages.length} msg
           </span>
         </div>
@@ -89,7 +91,7 @@ export function ChatPanel({
         <div
           ref={listRef}
           className="hud-scroll flex flex-1 flex-col gap-2 overflow-y-auto p-2.5"
-          style={{ maxHeight: '300px', minHeight: '210px' }}
+          style={{ maxHeight: '310px', minHeight: '215px' }}
         >
           {messages.map((msg) => {
             const isUser = msg.role === 'user';
@@ -99,19 +101,29 @@ export function ChatPanel({
                 className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}
               >
                 <div
-                  className={`font-prose max-w-[90%] rounded-lg px-2.5 py-1.5 text-[12px] leading-snug ${
-                    isUser
-                      ? 'border border-[#9b6ee8]/50 bg-[#5e38a8]/55 text-[#f2f1fa]'
-                      : 'border border-[#3c375e] bg-[#161526] text-[#f2f1fa]'
+                  className={`font-prose max-w-[92%] rounded-lg px-2.5 py-1.5 text-[12px] leading-snug ${
+                    msg.isError
+                      ? 'border border-[#e02446]/50 bg-[#e02446]/15 text-[#ffd0da]'
+                      : isUser
+                        ? 'border border-[#9b6ee8]/50 bg-[#5e38a8]/55 text-[#f2f1fa]'
+                        : 'border border-[#3c375e] bg-[#161526] text-[#f2f1fa]'
                   }`}
                 >
-                  {!isUser && (
-                    <div className="mb-0.5 flex items-center gap-1.5 font-mono text-[9.5px] font-bold text-[#9b6ee8]">
+                  {!isUser && !msg.isError && (
+                    <div className="mb-0.5 flex flex-wrap items-center gap-1.5 font-mono text-[9.5px] font-bold text-[#9b6ee8]">
                       <span>Marioneta</span>
                       {msg.mood && (
                         <>
                           <span aria-hidden="true">·</span>
                           <span className="text-[#e8c674]">{msg.mood}</span>
+                        </>
+                      )}
+                      {msg.provider && (
+                        <>
+                          <span aria-hidden="true">·</span>
+                          <span className="font-normal text-[#8e89b0]">
+                            {msg.provider === 'pawan' ? 'Pawan' : 'Flash Lite'}
+                          </span>
                         </>
                       )}
                     </div>
@@ -160,8 +172,8 @@ export function ChatPanel({
             type="text"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="Habla con ella o pídele un traje…"
-            maxLength={180}
+            placeholder="Pídele poses, vestuario, gestos o charla…"
+            maxLength={200}
             className="font-prose min-w-0 flex-1 rounded-md border border-[#3c375e] bg-[#12111d] px-2.5 py-1.5 text-xs text-[#f2f1fa] placeholder-[#7d789e] outline-none focus:border-[#9b6ee8]"
           />
           <button
